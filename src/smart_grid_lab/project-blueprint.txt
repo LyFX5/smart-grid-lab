@@ -1,0 +1,38 @@
+project/
+│
+├── core/                      # your existing simulation engine
+│   ├── microgrid.py
+│   ├── components/
+│   ├── controllers/
+│   ├── forecasters/
+│   └── simulate.py
+│
+├── domain/                    # SYSTEM STATE (CRITICAL LAYER)
+│   ├── schemas.py             # dataclasses / pydantic
+│   ├── builders.py            # build state from UI
+│   └── validators.py
+│
+├── application/               # ORCHESTRATION LOGIC
+│   ├── use_cases/
+│   │   ├── run_simulation.py
+│   │   ├── update_config.py
+│   │   └── load_template.py
+│   └── services/
+│
+├── infrastructure/            # optional but future-proof
+│   ├── storage/               # file/db later
+│   └── adapters/
+│
+├── ui_dash/
+│   ├── app.py
+│   ├── layout/
+│   │   ├── window1.py
+│   │   ├── window2.py
+│   │   └── window3.py
+│   ├── callbacks/
+│   │   ├── config_callbacks.py
+│   │   ├── simulation_callbacks.py
+│   │   └── visualization_callbacks.py
+│   └── components/
+│
+└── experiments/               # ML / notebooks / sandbox
