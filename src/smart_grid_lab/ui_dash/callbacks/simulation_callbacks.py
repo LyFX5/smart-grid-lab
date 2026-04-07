@@ -2,23 +2,13 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+
 import plotly.graph_objects as go
+from dash import dcc, html
 from dash import Input, Output, State
 from plotly.subplots import make_subplots
 
-from smart_grid_lab import Time
-from smart_grid_lab.application.use_cases.run_simulation import (
-    BatteryConfig,
-    SimulationSetup,
-    TimeConfig,
-    run_simulation as run_simulation_use_case,
-)
-
-
-def _time_index_and_periods(time: Time) -> tuple[pd.DatetimeIndex, int]:
-    periods = int((time.end - time.start) // time.step)
-    time_index = pd.date_range(time.start, periods=periods, freq=time.step)
-    return time_index, periods
+import smart_grid_lab.application.use_cases.base as base_simulation
 
 
 def _series_to_store(s: pd.Series) -> dict:
@@ -69,7 +59,7 @@ def _empty_figure(message: str) -> go.Figure:
     return fig
 
 
-def make_dynamics_figure(df: pd.DataFrame) -> go.Figure:
+def make_telemetry_figure(df: pd.DataFrame) -> go.Figure:
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     left_cols = [
         "solar_power",
@@ -100,28 +90,22 @@ def make_dynamics_figure(df: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def _time_from_inputs(
-    start: str | None,
-    end: str | None,
-    step_minutes: int | float | None,
-) -> Time:
-    """
-    Build a core `Time` object from UI inputs, with safe fallbacks.
-    """
-    if not start:
-        start = "2026-03-15 12:00:00"
-    if not end:
-        end = "2026-03-20 12:00:00"
-    try:
-        step_val = int(step_minutes) if step_minutes is not None else 10
-    except (TypeError, ValueError):
-        step_val = 10
-
-    return Time(
-        start=pd.Timestamp(start),
-        end=pd.Timestamp(end),
-        step=pd.Timedelta(step_val, "min"),
+def make_metrics_table(df: pd.DataFrame) -> html.Table:
+    return html.Table(
+        [
+            html.Thead(html.Tr([html.Th(col) for col in df.columns])),
+            html.Tbody(
+                [
+                    html.Tr([html.Td(df.iloc[i][col]) for col in df.columns])
+                    for i in range(len(df))
+                ]
+            ),
+        ]
     )
+
+
+def _empty_table():
+    make_metrics_table(pd.DataFrame())
 
 
 def register_simulation_callbacks(app) -> None:
@@ -135,9 +119,9 @@ def register_simulation_callbacks(app) -> None:
         prevent_initial_call=True,
     )
     def load_solar_sample(_n_clicks, start, end, step_minutes):
-        time = _time_from_inputs(start, end, step_minutes)
-        ti, _ = _time_index_and_periods(time)
-        return _series_to_store(sample_solar_irradiance(ti))
+        time_cfg = base_simulation.time_config_from_inputs(start, end, step_minutes)
+        time = base_simulation.build_time(time_cfg)
+        return _series_to_store(sample_solar_irradiance(time.index_range))
 
     @app.callback(
         Output("load-profile-store", "data"),
@@ -148,12 +132,13 @@ def register_simulation_callbacks(app) -> None:
         prevent_initial_call=True,
     )
     def load_load_sample(_n_clicks, start, end, step_minutes):
-        time = _time_from_inputs(start, end, step_minutes)
-        ti, periods = _time_index_and_periods(time)
-        return _series_to_store(sample_load_power(ti, periods))
+        time_cfg = base_simulation.time_config_from_inputs(start, end, step_minutes)
+        time = base_simulation.build_time(time_cfg)
+        return _series_to_store(sample_load_power(time.index_range, time.periods))
 
     @app.callback(
-        Output("main-graph", "figure"),
+        Output("telemetry-figure", "figure"),
+        Output("metrics-table", "children"),
         Input("btn-run-simulation", "n_clicks"),
         State("solar-profile-store", "data"),
         State("load-profile-store", "data"),
@@ -183,51 +168,37 @@ def register_simulation_callbacks(app) -> None:
         initial_soc,
     ):
         if not n_clicks:
-            return _empty_figure('Click "Run Simulation" to compute results.')
+            return (
+                _empty_figure('Click "Run Simulation" to compute results.'),
+                _empty_table(),
+            )
 
-        time = _time_from_inputs(start, end, step_minutes)
-        ti, periods = _time_index_and_periods(time)
+        time_cfg = base_simulation.time_config_from_inputs(start, end, step_minutes)
+        time = base_simulation.build_time(time_cfg)
+
         solar_series = _series_from_store(solar_data)
         if solar_series is None:
-            solar_series = sample_solar_irradiance(ti)
+            solar_series = sample_solar_irradiance(time.index_range)
 
         load_series = _series_from_store(load_data)
         if load_series is None:
-            load_series = sample_load_power(ti, periods)
+            load_series = sample_load_power(time.index_range, time.periods)
 
-        def _num(v, default):
-            if v is None:
-                return default
-            try:
-                return float(v)
-            except (TypeError, ValueError):
-                return default
+        battery_cfg = base_simulation.battery_config_from_inputs(
+            capacity_kwh,
+            max_charge_kw,
+            max_discharge_kw,
+            charge_eff,
+            discharge_eff,
+            initial_soc,
+        )
 
-        capacity_kwh = _num(capacity_kwh, 100.0)
-        max_charge_kw = _num(max_charge_kw, 30.0)
-        max_discharge_kw = _num(max_discharge_kw, 30.0)
-        charge_eff = _num(charge_eff, 0.95)
-        discharge_eff = _num(discharge_eff, 0.95)
-        initial_soc = _num(initial_soc, 0.5)
+        simulation_setup = base_simulation.setup_from_inputs(
+            time_cfg, solar_series, load_series, battery_cfg
+        )
+        simulation_results = base_simulation.run_simulation(simulation_setup)
 
-        time_cfg = TimeConfig(
-            start=str(time.start),
-            end=str(time.end),
-            step_minutes=int(time.step / pd.Timedelta(1, "min")),
+        return (
+            make_telemetry_figure(simulation_results.trajectory),
+            make_metrics_table(simulation_results.metrics),
         )
-        battery_cfg = BatteryConfig(
-            capacity_kwh=capacity_kwh,
-            max_charge_kw=max_charge_kw,
-            max_discharge_kw=max_discharge_kw,
-            max_charge_efficiency=charge_eff,
-            max_discharge_efficiency=discharge_eff,
-            initial_soc=initial_soc,
-        )
-        app_setup = SimulationSetup(
-            time=time_cfg,
-            battery=battery_cfg,
-            solar_profile=solar_series,
-            load_profile=load_series,
-        )
-        df = run_simulation_use_case(app_setup, use_bar=False)
-        return make_dynamics_figure(df)
