@@ -1,7 +1,4 @@
 from dash import dcc, html
-import plotly.graph_objects as go
-
-import pandas as pd
 
 
 time = html.Div(
@@ -151,58 +148,4 @@ run_button = html.Button(
         "fontWeight": "600",
         "marginTop": "auto",
     },
-)
-
-
-def _placeholder_telemetry_figure():
-    fig = go.Figure()
-    fig.update_layout(
-        title="Microgrid Telemetry",
-        annotations=[
-            dict(
-                text='Click "Run Simulation" to compute results.',
-                xref="paper",
-                yref="paper",
-                x=0.5,
-                y=0.5,
-                showarrow=False,
-                font=dict(size=14),
-            )
-        ],
-    )
-    return fig
-
-
-telemetry_figure = html.Div(
-    className="telemetry-figure",
-    style={"flex": "1", "minWidth": 0, "padding": "1rem"},
-    children=[
-        dcc.Graph(
-            id="telemetry-figure",
-            figure=_placeholder_telemetry_figure(),
-            config={"displayModeBar": True},
-            style={"height": "85vh"},
-        ),
-    ],
-)
-
-df = pd.DataFrame()
-
-metrics_table = html.Div(
-    className="metrics-table",
-    style={"flex": "1", "minWidth": 0, "padding": "1rem"},
-    children=[
-        html.Table(
-            [
-                html.Thead(html.Tr([html.Th(col) for col in df.columns])),
-                html.Tbody(
-                    [
-                        html.Tr([html.Td(df.iloc[i][col]) for col in df.columns])
-                        for i in range(len(df))
-                    ]
-                ),
-            ],
-            id="metrics-table",
-        )
-    ],
 )

@@ -56,5 +56,7 @@ class Simulation:
         return trajectory
 
     def calculate_metrics(self, trajectory: pd.DataFrame) -> pd.DataFrame:
-        metrics = trajectory.resample("D").mean()
+        metrics = (
+            trajectory[["solar_power", "load_power"]].resample("D").mean().round(3)
+        )
         return metrics

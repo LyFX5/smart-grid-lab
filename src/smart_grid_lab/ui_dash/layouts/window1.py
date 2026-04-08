@@ -1,5 +1,6 @@
 from dash import dcc, html
-from . import elements
+from . import setup_elements
+from . import results_elements
 
 
 setup_column = html.Div(
@@ -16,11 +17,11 @@ setup_column = html.Div(
     },
     children=[
         html.H2("Set Up Microgrid", style={"marginTop": 0}),
-        elements.time,
-        elements.solar_irradiance,
-        elements.load_power,
-        elements.battery,
-        elements.run_button,
+        setup_elements.time,
+        setup_elements.solar_irradiance,
+        setup_elements.load_power,
+        setup_elements.battery,
+        setup_elements.run_button,
         dcc.Store(id="solar-profile-store", data=None),
         dcc.Store(id="load-profile-store", data=None),
     ],
@@ -30,7 +31,8 @@ results_column = html.Div(
     className="results-column",
     style={
         # "width": "340px",
-        "minWidth": 0,
+        # "minWidth": "100%",
+        "width": "100%",
         "padding": "1rem 1.25rem",
         "borderRight": "1px solid #ddd",
         "overflowY": "auto",
@@ -38,7 +40,7 @@ results_column = html.Div(
         "flexDirection": "column",
         "gap": "1rem",
     },
-    children=[elements.telemetry_figure, elements.metrics_table],
+    children=[results_elements.telemetry_figure, results_elements.metrics_table],
 )
 
 
@@ -50,6 +52,10 @@ layout = html.Div(
         "gap": "1rem",
         # "minHeight": "100vh",
         "alignItems": "stretch",
+        # "backgroundColor": "#020617",
+        "padding": "16px",
+        "borderRadius": "12px",
+        "boxShadow": "0 10px 30px rgba(0,0,0,0.3)",
     },
     children=[
         setup_column,

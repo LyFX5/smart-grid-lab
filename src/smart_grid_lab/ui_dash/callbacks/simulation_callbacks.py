@@ -2,13 +2,11 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-
-import plotly.graph_objects as go
-from dash import dcc, html
 from dash import Input, Output, State
-from plotly.subplots import make_subplots
 
-import smart_grid_lab.application.use_cases.base as base_simulation
+from smart_grid_lab.application.use_cases import demo_simulation
+
+from smart_grid_lab.ui_dash.layouts import results_elements
 
 
 def _series_to_store(s: pd.Series) -> dict:
@@ -40,74 +38,6 @@ def sample_load_power(time_index: pd.DatetimeIndex, periods: int) -> pd.Series:
     return pd.Series(data=load, index=time_index)
 
 
-def _empty_figure(message: str) -> go.Figure:
-    fig = go.Figure()
-    fig.update_layout(
-        title="Microgrid Dynamics",
-        annotations=[
-            dict(
-                text=message,
-                xref="paper",
-                yref="paper",
-                x=0.5,
-                y=0.5,
-                showarrow=False,
-                font=dict(size=14),
-            )
-        ],
-    )
-    return fig
-
-
-def make_telemetry_figure(df: pd.DataFrame) -> go.Figure:
-    fig = make_subplots(specs=[[{"secondary_y": True}]])
-    left_cols = [
-        "solar_power",
-        "load_power",
-        "battery_available_power",
-        "battery_charge_power",
-        "battery_discharge_power",
-    ]
-    right_cols = ["battery_soc"]
-
-    for col in left_cols:
-        if col in df.columns:
-            fig.add_trace(
-                go.Scatter(x=df.index, y=df[col], name=col),
-                secondary_y=False,
-            )
-
-    for col in right_cols:
-        if col in df.columns:
-            fig.add_trace(
-                go.Scatter(x=df.index, y=df[col], name=col),
-                secondary_y=True,
-            )
-
-    fig.update_layout(title="Microgrid Dynamics")
-    fig.update_yaxes(title_text="Power (kW)", secondary_y=False)
-    fig.update_yaxes(title_text="SOC (%)", secondary_y=True)
-    return fig
-
-
-def make_metrics_table(df: pd.DataFrame) -> html.Table:
-    return html.Table(
-        [
-            html.Thead(html.Tr([html.Th(col) for col in df.columns])),
-            html.Tbody(
-                [
-                    html.Tr([html.Td(df.iloc[i][col]) for col in df.columns])
-                    for i in range(len(df))
-                ]
-            ),
-        ]
-    )
-
-
-def _empty_table():
-    make_metrics_table(pd.DataFrame())
-
-
 def register_simulation_callbacks(app) -> None:
 
     @app.callback(
@@ -119,8 +49,8 @@ def register_simulation_callbacks(app) -> None:
         prevent_initial_call=True,
     )
     def load_solar_sample(_n_clicks, start, end, step_minutes):
-        time_cfg = base_simulation.time_config_from_inputs(start, end, step_minutes)
-        time = base_simulation.build_time(time_cfg)
+        time_cfg = demo_simulation.time_config_from_inputs(start, end, step_minutes)
+        time = demo_simulation.build_time(time_cfg)
         return _series_to_store(sample_solar_irradiance(time.index_range))
 
     @app.callback(
@@ -132,8 +62,8 @@ def register_simulation_callbacks(app) -> None:
         prevent_initial_call=True,
     )
     def load_load_sample(_n_clicks, start, end, step_minutes):
-        time_cfg = base_simulation.time_config_from_inputs(start, end, step_minutes)
-        time = base_simulation.build_time(time_cfg)
+        time_cfg = demo_simulation.time_config_from_inputs(start, end, step_minutes)
+        time = demo_simulation.build_time(time_cfg)
         return _series_to_store(sample_load_power(time.index_range, time.periods))
 
     @app.callback(
@@ -169,12 +99,12 @@ def register_simulation_callbacks(app) -> None:
     ):
         if not n_clicks:
             return (
-                _empty_figure('Click "Run Simulation" to compute results.'),
-                _empty_table(),
+                results_elements.make_telemetry_figure(None),
+                results_elements.make_metrics_table(None),
             )
 
-        time_cfg = base_simulation.time_config_from_inputs(start, end, step_minutes)
-        time = base_simulation.build_time(time_cfg)
+        time_cfg = demo_simulation.time_config_from_inputs(start, end, step_minutes)
+        time = demo_simulation.build_time(time_cfg)
 
         solar_series = _series_from_store(solar_data)
         if solar_series is None:
@@ -184,7 +114,7 @@ def register_simulation_callbacks(app) -> None:
         if load_series is None:
             load_series = sample_load_power(time.index_range, time.periods)
 
-        battery_cfg = base_simulation.battery_config_from_inputs(
+        battery_cfg = demo_simulation.battery_config_from_inputs(
             capacity_kwh,
             max_charge_kw,
             max_discharge_kw,
@@ -193,12 +123,12 @@ def register_simulation_callbacks(app) -> None:
             initial_soc,
         )
 
-        simulation_setup = base_simulation.setup_from_inputs(
+        simulation_setup = demo_simulation.setup_from_inputs(
             time_cfg, solar_series, load_series, battery_cfg
         )
-        simulation_results = base_simulation.run_simulation(simulation_setup)
+        simulation_results = demo_simulation.run_simulation(simulation_setup)
 
         return (
-            make_telemetry_figure(simulation_results.trajectory),
-            make_metrics_table(simulation_results.metrics),
+            results_elements.make_telemetry_figure(simulation_results.trajectory),
+            results_elements.make_metrics_table(simulation_results.metrics),
         )
