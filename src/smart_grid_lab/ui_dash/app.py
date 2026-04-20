@@ -2,7 +2,7 @@ from dash import Dash
 from layouts.window1 import layout
 from callbacks.main_callbacks import register_callbacks
 
-import webbrowser
+# import webbrowser
 
 app = Dash(__name__)
 app.layout = layout

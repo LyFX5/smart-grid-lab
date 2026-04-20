@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 project/
 │
 ├── core/                      # your existing simulation engine
