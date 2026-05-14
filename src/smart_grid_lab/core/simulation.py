@@ -1,4 +1,4 @@
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Any
 from dataclasses import dataclass
 import pandas as pd
 from tqdm import tqdm
@@ -23,7 +23,7 @@ class Results:
 
 class Simulation:
 
-    def __init__(self, setup: SetUp):
+    def __init__(self, setup: SetUp, strategy=None):
 
         self.setup = setup
 
@@ -32,9 +32,9 @@ class Simulation:
         ) // self.setup.time.step
 
         self.microgrid = Microgrid(self.setup.time, self.setup.components)
-        self.strategy = Strategy()  # TODO init with control configs from SetUp
+        self.strategy = strategy if strategy is not None else Strategy()
 
-    def step(self) -> Tuple[Dict[str, float], Dict[str, float]]:
+    def step(self) -> Tuple[Dict[str, Any], Dict[str, float]]:
         mcg_state = self.microgrid.state()
         self.strategy.step(mcg_state)
         action = self.strategy.action()

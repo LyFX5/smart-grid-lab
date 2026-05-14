@@ -29,8 +29,8 @@ Build Smart Grid Lab from prototype to a usable digital twin/research platform f
 
 ## Near-Term Priorities (next 2-4 weeks)
 
-- Finalize industrial use case specification
-- Implement first end-to-end use case in incremental slices
+- **UC-OFFGRID-H2-FORECAST-CONTROL** — Phase A runner + experiment log; Phase B battery coupling
+- Implement first end-to-end use case in incremental slices (application → core integration)
 - Add metrics table through application layer
 - Expand JSON persistence to scenario save/load UX
 - Publish at least one technical progress post

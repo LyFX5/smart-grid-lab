@@ -9,8 +9,9 @@ Created on Wed Apr 15 20:09:05 2026
 from typing import Dict, Any
 import pandas as pd
 import numpy as np
-from .component import Component
 from enum import Enum
+
+from .component import Component
 
 
 class StackState(Enum):
@@ -20,7 +21,7 @@ class StackState(Enum):
     RAMPDOWN = 4
 
 
-class Electrolyser:
+class Electrolyser(Component):
 
     def __init__(self, current_max, temperature_ambient):
 
@@ -75,7 +76,7 @@ class Electrolyser:
 
     def state(self) -> Dict[str, Any]:
         return {
-            "stack_state": self.stack_state,
+            "stack_state": float(self.stack_state.value),
             "production_rate": self.pr,
             "current": self.current(),
             "voltage": self.voltage(),

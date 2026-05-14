@@ -35,7 +35,13 @@ The goal is to help engineers and researchers:
 - `infrastructure`: persistence and adapters (JSON setup storage)
 - `ui_dash`: presentation layer (layouts, callbacks, graphs)
 
-The near-term principle is to keep callbacks thin and move behavior to the application layer.
+- `core`: simulation engine, **all microgrid components** (including hydrogen), **forecast model contracts** + reference heuristics, **control strategies** that drive `Simulation` via injected `strategy`.
+- `application`: concrete use cases that **compose** core + infrastructure (e.g. `forecast_1` / `forecast_2`, strategy version) and call **`Simulation`**.
+- `infrastructure`: **forecast inference** adapters (trained models, APIs), persistence (JSON setups), and other I/O.
+- `ui_dash`: presentation only; depends on application use cases.
+
+Principle: **UI → application → Simulation(core) → Microgrid(components)**; infrastructure plugs in at the application wiring boundary.
+
 
 ## Repository Layout
 
