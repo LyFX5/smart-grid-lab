@@ -38,6 +38,7 @@ At each step `t`:
 - H₂ components **integrated in core** `Microgrid` stepping.
 - Forecast **contract** in core; oracle / rolling **implementations** in core.
 - Application use case: `run_forecast_h2_offgrid_simulation`.
+- UI slice in `window1`: selectable `Forecast H₂ control` mode, synthetic solar/load inputs, first H₂ forecast parameters, and H₂ telemetry/KPIs.
 
 ### Phase B
 
@@ -52,6 +53,9 @@ At each step `t`:
 ## Code map
 
 - Use case: `src/smart_grid_lab/application/use_cases/off_grid_h2_forecast_control.py`
+- UI layout: `src/smart_grid_lab/ui_dash/layouts/setup_elements.py` + `src/smart_grid_lab/ui_dash/layouts/window1.py`
+- UI callback: `src/smart_grid_lab/ui_dash/callbacks/simulation_callbacks.py`
+- UI visualization: `src/smart_grid_lab/ui_dash/layouts/results_elements.py`
 - Forecast ABC + heuristics: `src/smart_grid_lab/core/forecasting/`
 - Policy helper: `src/smart_grid_lab/core/controllers/h2_surplus_policy.py`
 - Strategy: `src/smart_grid_lab/core/controllers/forecast_h2_battery_strategy.py`
@@ -60,7 +64,8 @@ At each step `t`:
 
 ## KPIs (experiment log)
 
-- Curtailed energy, H₂ mass, tank violations, ramp cycles / degradation proxy.
+- Current UI KPIs: solar/load/electrolyser energy, H₂ mass produced, final tank level, final battery SOC, electrolyser degradation proxy.
+- Next KPIs: curtailed energy, tank violations, ramp cycles / degradation proxy refinements.
 
 ## Open questions
 

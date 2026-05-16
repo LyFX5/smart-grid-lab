@@ -137,6 +137,102 @@ battery = html.Div(
     ]
 )
 
+
+control_use_case = html.Div(
+    [
+        html.H4(
+            "Control use case",
+            style={"margin": "0 0 0.5rem 0", "fontSize": "1rem"},
+        ),
+        dcc.RadioItems(
+            id="control-use-case",
+            options=[
+                {"label": "Battery baseline", "value": "battery_baseline"},
+                {"label": "Forecast H₂ control", "value": "forecast_h2"},
+            ],
+            value="battery_baseline",
+            labelStyle={"display": "block", "marginBottom": "0.35rem"},
+        ),
+        html.P(
+            "Forecast H₂ mode converts the synthetic solar sample to kW "
+            "and runs the off-grid electrolyser + tank use case.",
+            style={"fontSize": "12px", "margin": "0.5rem 0 0", "color": "#64748b"},
+        ),
+    ]
+)
+
+forecast_h2 = html.Div(
+    [
+        html.H4(
+            "Forecast H₂ controls",
+            style={"margin": "0 0 0.5rem 0", "fontSize": "1rem"},
+        ),
+        html.Label("Forecast model", htmlFor="forecast-model"),
+        dcc.Dropdown(
+            id="forecast-model",
+            options=[
+                {
+                    "label": "Oracle mean surplus (synthetic benchmark)",
+                    "value": "oracle",
+                },
+                {
+                    "label": "Rolling mean surplus (causal baseline)",
+                    "value": "rolling",
+                },
+            ],
+            value="oracle",
+            clearable=False,
+            style={"width": "100%", "marginBottom": "0.5rem"},
+        ),
+        html.Label("Forecast horizon (steps)", htmlFor="forecast-horizon"),
+        dcc.Input(
+            id="forecast-horizon",
+            type="number",
+            value=6,
+            min=1,
+            step=1,
+            style={"width": "100%", "marginBottom": "0.5rem"},
+        ),
+        html.Label("Rolling window (steps)", htmlFor="forecast-window"),
+        dcc.Input(
+            id="forecast-window",
+            type="number",
+            value=6,
+            min=1,
+            step=1,
+            style={"width": "100%", "marginBottom": "0.5rem"},
+        ),
+        html.Label("Tank capacity (kg)", htmlFor="h2-tank-capacity-kg"),
+        dcc.Input(
+            id="h2-tank-capacity-kg",
+            type="number",
+            value=50,
+            min=1,
+            step=1,
+            style={"width": "100%", "marginBottom": "0.5rem"},
+        ),
+        html.Label("Initial tank level (0–1)", htmlFor="h2-tank-initial-level"),
+        dcc.Input(
+            id="h2-tank-initial-level",
+            type="number",
+            value=0.2,
+            min=0,
+            max=0.95,
+            step=0.01,
+            style={"width": "100%", "marginBottom": "0.5rem"},
+        ),
+        html.Label("Electrolyser max current (A)", htmlFor="electrolyser-current-max-a"),
+        dcc.Input(
+            id="electrolyser-current-max-a",
+            type="number",
+            value=4,
+            min=0,
+            step=0.1,
+            style={"width": "100%"},
+        ),
+    ]
+)
+
 run_button = html.Button(
     "Run Simulation",
     id="btn-run-simulation",

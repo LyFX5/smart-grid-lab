@@ -10,6 +10,8 @@ colors = {
     "battery_available_power": "blue",
     "battery_charge_power": "#34d399",  # green storing
     "battery_discharge_power": "#f87171",  # red releasing
+    "electrolyser_power_kw": "#a855f7",  # purple flexible H₂ load
+    "hydrogen_tank_level": "#14b8a6",  # teal storage level
 }
 
 cell_style = {
@@ -21,30 +23,45 @@ cell_style = {
 def make_telemetry_figure(telemetry_df: pd.DataFrame | None):
     if telemetry_df is not None:
         fig = make_subplots(specs=[[{"secondary_y": True}]])
+        plot_df = telemetry_df.copy()
+        if "electrolyser_power" in plot_df.columns:
+            plot_df["electrolyser_power_kw"] = plot_df["electrolyser_power"] / 1000.0
+
         left_cols = [
             "solar_power",
             "load_power",
             "battery_available_power",
             "battery_charge_power",
             "battery_discharge_power",
+            "electrolyser_power_kw",
         ]
-        right_cols = ["battery_soc"]
+        right_cols = ["battery_soc", "hydrogen_tank_level"]
 
         for col in left_cols:
-            if col in telemetry_df.columns:
+            if col in plot_df.columns:
                 fig.add_trace(
-                    go.Scatter(x=telemetry_df.index, y=telemetry_df[col], name=col),
+                    go.Scatter(
+                        x=plot_df.index,
+                        y=plot_df[col],
+                        name=col,
+                        line={"color": colors.get(col)},
+                    ),
                     secondary_y=False,
                 )
 
         for col in right_cols:
-            if col in telemetry_df.columns:
+            if col in plot_df.columns:
                 fig.add_trace(
-                    go.Scatter(x=telemetry_df.index, y=telemetry_df[col], name=col),
+                    go.Scatter(
+                        x=plot_df.index,
+                        y=plot_df[col],
+                        name=col,
+                        line={"color": colors.get(col)},
+                    ),
                     secondary_y=True,
                 )
         fig.update_yaxes(title_text="Power (kW)", secondary_y=False)
-        fig.update_yaxes(title_text="SOC (%)", secondary_y=True)
+        fig.update_yaxes(title_text="State of charge / tank level (0–1)", secondary_y=True)
     else:
         fig = go.Figure()
         fig.update_layout(

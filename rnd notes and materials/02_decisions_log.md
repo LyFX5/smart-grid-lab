@@ -58,3 +58,15 @@ Use this file for architecture, modeling, and product decisions.
 - `rationale`: Better boundary between application and storage details.
 - `tradeoffs`: Requires schema maintenance over time.
 - `impact_on_next_steps`: Enables scenario library and comparable runs.
+
+### 2026-05-16 (forecast H₂ UI slice)
+
+- `decision`: Implement the first forecast-based H₂ UI path inside `window1` as a selectable control use case.
+- `context`: The next step is incremental UI delivery on synthetic data while preserving the clean layering rule.
+- `options_considered`:
+  - create a separate dedicated H₂ window immediately,
+  - add a mode selector to the existing setup/run/results window.
+- `chosen_option`: Add `Battery baseline` vs `Forecast H₂ control` mode selection in `window1`; callbacks stay thin and delegate H₂ execution to `run_forecast_h2_offgrid_from_ui_battery`.
+- `rationale`: Fastest usable vertical slice with minimal UI duplication and a clear path to side-by-side comparisons.
+- `tradeoffs`: The setup panel is denser; a dedicated scenario page may be needed later.
+- `impact_on_next_steps`: Add comparison UX, curtailment KPIs, and infrastructure-backed forecaster selection.
