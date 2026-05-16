@@ -18,9 +18,11 @@ setup_column = html.Div(
     children=[
         html.H2("Set Up Microgrid", style={"marginTop": 0}),
         setup_elements.time,
+        setup_elements.control_use_case,
         setup_elements.solar_irradiance,
         setup_elements.load_power,
         setup_elements.battery,
+        setup_elements.forecast_h2,
         setup_elements.run_button,
         dcc.Store(id="solar-profile-store", data=None),
         dcc.Store(id="load-profile-store", data=None),

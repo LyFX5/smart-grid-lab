@@ -1,7 +1,11 @@
 from typing import Tuple, Dict, Any
 from dataclasses import dataclass
 import pandas as pd
-from tqdm import tqdm
+try:
+    from tqdm import tqdm
+except ModuleNotFoundError:  # pragma: no cover - exercised only in minimal envs
+    def tqdm(iterable, disable=False):
+        return iterable
 from .time import Time
 from .components import Component
 from .microgrid import Microgrid

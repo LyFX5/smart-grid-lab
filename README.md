@@ -25,7 +25,9 @@ The goal is to help engineers and researchers:
 - Sample profile loading for solar irradiance and load power
 - Battery initialization parameters
 - Simulation run with trajectory visualization
-- Application-layer `run_simulation` use case
+- UI-selectable forecast-based H₂ control use case on synthetic data
+- H₂ telemetry visualization for electrolyser power and tank level
+- Application-layer `run_simulation` and `run_forecast_h2_offgrid_simulation` use cases
 - Infrastructure utilities for JSON serialization of simulation setups
 
 ## Architecture (Current Direction)
@@ -85,10 +87,11 @@ Then open `http://127.0.0.1:8050/`.
 ## Workflow for Development
 
 1. Define/adjust setup in UI (`window1`)
-2. Run simulation and inspect output figure
-3. Capture progress in `rnd notes and materials/`
-4. Promote stable behavior from callbacks into application/infrastructure
-5. Record decisions and assumptions for reproducibility
+2. Choose `Battery baseline` or `Forecast H₂ control`
+3. Run simulation and inspect output figure/KPI table
+4. Capture progress in `rnd notes and materials/`
+5. Promote stable behavior from callbacks into application/infrastructure
+6. Record decisions and assumptions for reproducibility
 
 ## Progress Tracking
 
@@ -103,8 +106,9 @@ Use the notes system in `rnd notes and materials/`:
 
 Define an industrial use case and implement gradually:
 
-- Example: electrolyser control based on solar/load forecasts and optimal energy management
-- Build incrementally from simplified assumptions to validated scenarios
+- Compare oracle vs rolling surplus forecast control in the UI
+- Add explicit curtailment and residual-energy KPIs for the H₂ scenario
+- Replace synthetic heuristics with infrastructure-backed trained forecasters when model artifacts exist
 
 ## Contributing
 

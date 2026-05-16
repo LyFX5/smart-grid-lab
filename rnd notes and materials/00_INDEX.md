@@ -16,6 +16,7 @@ This folder is the operational memory of the project.
 - `02_decisions_log.md` - architectural/product decisions and rationale
 - `03_experiment_log.md` - experiment design, results, validation notes
 - `04_media_strategy.md` - communication plan and content pipeline
+- `posts/` - draft public updates generated from progress notes
 - `use_cases/UC-OFFGRID-H2-FORECAST-CONTROL.md` - industrial-style use case definition
 - `04-05-2026.md` - existing daily note (now normalized)
 - `templates/daily_note_template.md` - template for day-by-day progress

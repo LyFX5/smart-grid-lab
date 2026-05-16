@@ -38,7 +38,7 @@ class Electrolyser(Component):
         self.stack_state = StackState.IDLE
         self.temperature = self.temperature_ambient  # gradus
         self.degradation = 0
-        self.time = pd.Timestamp()
+        self.time = pd.Timestamp(0)
 
         # dynamical parameters
         # TODO
@@ -104,18 +104,28 @@ class Electrolyser(Component):
             self.stack_state = StackState.RAMPUP
             self.degradation += self.degradation_increment
 
+    def _relax(self, current: float, target: float, inertia: float) -> float:
+        """Move a state variable toward a target during one internal sub-step."""
+        alpha = min(1.0, max(0.0, inertia))
+        return current + alpha * (target - current)
+
     def rampup_dynamics(self):
         diff = self.pr_reference - self.pr
-        self.pr += self.step_min_duration * self.rampup_inertia * diff
+        if self.pr_reference <= self.pr:
+            self.stack_state = (
+                StackState.STEADY if self.pr_reference > 0 else StackState.RAMPDOWN
+            )
+            return
 
-        temperature_diff = self.temperature_max - self.temperature
-        self.temperature += (
-            self.step_min_duration * self.temperature_rise_inertia * temperature_diff
+        self.pr = self._relax(self.pr, self.pr_reference, self.rampup_inertia)
+        self.temperature = self._relax(
+            self.temperature, self.temperature_max, self.temperature_rise_inertia
         )
 
-        assert diff > 0
-
-        if abs(diff / self.pr_reference - self.rampup_treshold) < self.eps:
+        remaining = abs(self.pr_reference - self.pr) / max(
+            abs(self.pr_reference), self.eps
+        )
+        if remaining <= self.rampup_treshold:
             self.stack_state = StackState.STEADY
 
     def steady_dynamics(self):
@@ -126,25 +136,21 @@ class Electrolyser(Component):
         из-за динамики давления газов и тепловых процессов
         """
         inertia = self.steady_inertia * (2 if diff < 0 else 4)
-        self.pr += self.step_min_duration * inertia * diff
-
-        temperature_diff = self.temperature_max - self.temperature
-        self.temperature += (
-            self.step_min_duration * self.temperature_rise_inertia * temperature_diff
+        self.pr = self._relax(self.pr, self.pr_reference, inertia)
+        self.temperature = self._relax(
+            self.temperature, self.temperature_max, self.temperature_rise_inertia
         )
 
         if self.pr_reference == 0:
             self.stack_state = StackState.RAMPDOWN
 
     def rampdown_dynamics(self):
-        diff = self.pr_reference - self.pr
-        self.pr += self.step_min_duration * self.rampdown_inertia * diff
-
-        temperature_diff = self.temperature_ambient - self.temperature
-        self.temperature += (
-            self.step_min_duration * self.temperature_down_inertia * temperature_diff
+        self.pr = self._relax(self.pr, self.pr_reference, self.rampdown_inertia)
+        self.temperature = self._relax(
+            self.temperature, self.temperature_ambient, self.temperature_down_inertia
         )
 
         if abs(self.pr) < self.eps:
+            self.pr = 0.0
             self.stack_state = StackState.IDLE
             self.degradation += self.degradation_increment

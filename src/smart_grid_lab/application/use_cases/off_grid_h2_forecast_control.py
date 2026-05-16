@@ -53,7 +53,7 @@ class OffGridH2ForecastConfig:
     use_oracle_forecast: bool = True
     tank_capacity_kg: float = 50.0
     tank_initial_level: float = 0.2
-    electrolyser_current_max_a: float = 400.0
+    electrolyser_current_max_a: float = 4.0
     temperature_ambient_c: float = 25.0
 
 
@@ -131,8 +131,44 @@ def run_forecast_h2_offgrid_simulation(
 
     sim = Simulation(setup, strategy=strategy)
     trajectory = sim.run(use_bar=False)
-    metrics = sim.calculate_metrics(trajectory)
+    metrics = calculate_forecast_h2_metrics(trajectory, time.step)
     return Results(trajectory=trajectory, metrics=metrics)
+
+
+def calculate_forecast_h2_metrics(
+    trajectory: pd.DataFrame,
+    step: pd.Timedelta,
+) -> pd.DataFrame:
+    """Summarize the forecast H₂ use case as UI-ready scalar KPIs."""
+    step_h = step.total_seconds() / 3600.0
+
+    def _energy_kwh(column: str, scale: float = 1.0) -> float | None:
+        if column not in trajectory.columns:
+            return None
+        return round(float((trajectory[column] * scale).sum() * step_h), 3)
+
+    final_row = trajectory.iloc[-1] if not trajectory.empty else pd.Series(dtype=float)
+    metrics = {
+        "solar_energy_kwh": _energy_kwh("solar_power"),
+        "load_energy_kwh": _energy_kwh("load_power"),
+        "electrolyser_energy_kwh": _energy_kwh("electrolyser_power", scale=1 / 1000.0),
+        "hydrogen_produced_kg": None,
+        "final_tank_level": None,
+        "final_battery_soc": None,
+        "electrolyser_degradation": None,
+    }
+    if "electrolyser_hydrogen_production" in trajectory.columns:
+        metrics["hydrogen_produced_kg"] = round(
+            float(trajectory["electrolyser_hydrogen_production"].sum() * step_h), 3
+        )
+    if "hydrogen_tank_level" in trajectory.columns and not trajectory.empty:
+        metrics["final_tank_level"] = round(float(final_row["hydrogen_tank_level"]), 3)
+    if "battery_soc" in trajectory.columns and not trajectory.empty:
+        metrics["final_battery_soc"] = round(float(final_row["battery_soc"]), 3)
+    if "electrolyser_degradation" in trajectory.columns and not trajectory.empty:
+        metrics["electrolyser_degradation"] = round(float(final_row["electrolyser_degradation"]), 3)
+
+    return pd.DataFrame([metrics])
 
 
 def run_forecast_h2_offgrid_from_ui_battery(
