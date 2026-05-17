@@ -9,6 +9,7 @@ Build Smart Grid Lab from prototype to a usable digital twin/research platform f
 `Stage 0 - Foundational prototype`
 
 - Dash window for setup and simulation
+- UI-selectable forecast H₂ control slice on synthetic data
 - Clean layering started (UI -> application -> infrastructure)
 - Early architecture and experimentation flow in place
 
@@ -29,9 +30,9 @@ Build Smart Grid Lab from prototype to a usable digital twin/research platform f
 
 ## Near-Term Priorities (next 2-4 weeks)
 
-- **UC-OFFGRID-H2-FORECAST-CONTROL** — Phase A runner + experiment log; Phase B battery coupling
-- Implement first end-to-end use case in incremental slices (application → core integration)
-- Add metrics table through application layer
+- **UC-OFFGRID-H2-FORECAST-CONTROL** — compare oracle vs rolling forecast behavior in UI
+- Add explicit curtailment/residual-energy KPIs for forecast H₂ runs
+- Implement first end-to-end use case in incremental slices (application → core integration → UI)
 - Expand JSON persistence to scenario save/load UX
 - Publish at least one technical progress post
 

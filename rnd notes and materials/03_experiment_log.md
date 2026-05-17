@@ -59,3 +59,19 @@ This file tracks reproducible experiments and what was learned.
   - figure renders expected columns.
 - `confidence`: medium
 - `next_action`: add metrics table and scenario persistence UX.
+
+### EXP-2026-05-16-01
+
+- `date`: 2026-05-16
+- `objective`: Validate the forecast H₂ use case with the same synthetic profiles used by the Dash UI.
+- `setup_reference`: `window1` synthetic profile defaults + `OffGridH2ForecastConfig` defaults.
+- `assumptions`:
+  - synthetic irradiance is converted to solar kW using current PV area assumption (100 m²),
+  - oracle forecast is the default debugging benchmark,
+  - electrolyser current default is conservative (`4 A`) to avoid tank overflow in the multi-day demo.
+- `method`: run a 5-day synthetic scenario through `run_forecast_h2_offgrid_from_ui_battery` and inspect scalar KPIs.
+- `key_outputs`: energy totals, H₂ produced, final tank level, final battery SOC, electrolyser degradation proxy.
+- `result_summary`: Default synthetic run completed with final tank level at the 0.95 policy ceiling and UI-ready metrics generated.
+- `validation_checks`: no core simulation exceptions; tank level remains within bounds; trajectory includes H₂ telemetry columns.
+- `confidence`: medium for UI/demo behavior; low for physical validation until electrolyser/tank calibration is improved.
+- `next_action`: compare oracle and rolling forecast runs and add explicit curtailment/residual-energy KPIs.

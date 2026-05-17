@@ -44,7 +44,7 @@ def time_config_from_inputs(
     except (TypeError, ValueError):
         step_val = 10
 
-    return TimeConfig(start, end, step_minutes)
+    return TimeConfig(start, end, step_val)
 
 
 def battery_config_from_inputs(

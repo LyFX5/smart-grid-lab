@@ -5,6 +5,10 @@ import pandas as pd
 from dash import Input, Output, State
 
 from smart_grid_lab.application.use_cases import demo_simulation
+from smart_grid_lab.application.use_cases.off_grid_h2_forecast_control import (
+    OffGridH2ForecastConfig,
+    run_forecast_h2_offgrid_from_ui_battery,
+)
 
 from smart_grid_lab.ui_dash.layouts import results_elements
 
@@ -36,6 +40,27 @@ def sample_load_power(time_index: pd.DatetimeIndex, periods: int) -> pd.Series:
     base_load = 20 + 10 * np.sin(2 * np.pi * np.arange(periods) / 24)
     load = np.maximum(5, base_load + np.random.normal(0, 3, periods))
     return pd.Series(data=load, index=time_index)
+
+
+def _solar_kw_from_irradiance(irradiance: pd.Series) -> pd.Series:
+    # Mirrors the current Solar component default area (100 m²) so the same
+    # synthetic sample can drive both the baseline UI and the H₂ use case.
+    return irradiance.astype(float) * 100.0
+
+
+def _positive_int(value, default: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(1, parsed)
+
+
+def _float_or_default(value, default: float) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
 
 
 def register_simulation_callbacks(app) -> None:
@@ -81,6 +106,13 @@ def register_simulation_callbacks(app) -> None:
         State("battery-charge-efficiency", "value"),
         State("battery-discharge-efficiency", "value"),
         State("battery-initial-soc", "value"),
+        State("control-use-case", "value"),
+        State("forecast-model", "value"),
+        State("forecast-horizon", "value"),
+        State("forecast-window", "value"),
+        State("h2-tank-capacity-kg", "value"),
+        State("h2-tank-initial-level", "value"),
+        State("electrolyser-current-max-a", "value"),
         prevent_initial_call=True,
     )
     def run_simulation(
@@ -96,6 +128,13 @@ def register_simulation_callbacks(app) -> None:
         charge_eff,
         discharge_eff,
         initial_soc,
+        control_use_case,
+        forecast_model,
+        forecast_horizon,
+        forecast_window,
+        tank_capacity_kg,
+        tank_initial_level,
+        electrolyser_current_max_a,
     ):
         if not n_clicks:
             return (
@@ -114,19 +153,45 @@ def register_simulation_callbacks(app) -> None:
         if load_series is None:
             load_series = sample_load_power(time.index_range, time.periods)
 
-        battery_cfg = demo_simulation.battery_config_from_inputs(
-            capacity_kwh,
-            max_charge_kw,
-            max_discharge_kw,
-            charge_eff,
-            discharge_eff,
-            initial_soc,
-        )
+        if control_use_case == "forecast_h2":
+            scenario = OffGridH2ForecastConfig(
+                forecast_horizon=_positive_int(forecast_horizon, 6),
+                forecast_window=_positive_int(forecast_window, 6),
+                use_oracle_forecast=forecast_model != "rolling",
+                tank_capacity_kg=max(1.0, _float_or_default(tank_capacity_kg, 50.0)),
+                tank_initial_level=min(
+                    0.95, max(0.0, _float_or_default(tank_initial_level, 0.2))
+                ),
+                electrolyser_current_max_a=max(
+                    0.0, _float_or_default(electrolyser_current_max_a, 4.0)
+                ),
+            )
+            simulation_results = run_forecast_h2_offgrid_from_ui_battery(
+                time,
+                _solar_kw_from_irradiance(solar_series),
+                load_series,
+                capacity_kwh,
+                max_charge_kw,
+                max_discharge_kw,
+                charge_eff,
+                discharge_eff,
+                initial_soc,
+                scenario,
+            )
+        else:
+            battery_cfg = demo_simulation.battery_config_from_inputs(
+                capacity_kwh,
+                max_charge_kw,
+                max_discharge_kw,
+                charge_eff,
+                discharge_eff,
+                initial_soc,
+            )
 
-        simulation_setup = demo_simulation.setup_from_inputs(
-            time_cfg, solar_series, load_series, battery_cfg
-        )
-        simulation_results = demo_simulation.run_simulation(simulation_setup)
+            simulation_setup = demo_simulation.setup_from_inputs(
+                time_cfg, solar_series, load_series, battery_cfg
+            )
+            simulation_results = demo_simulation.run_simulation(simulation_setup)
 
         return (
             results_elements.make_telemetry_figure(simulation_results.trajectory),
