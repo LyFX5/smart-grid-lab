@@ -110,16 +110,19 @@ class Electrolyser(Component):
         return current + alpha * (target - current)
 
     def rampup_dynamics(self):
-        diff = self.pr_reference - self.pr
         if self.pr_reference <= self.pr:
             self.stack_state = (
-                StackState.STEADY if self.pr_reference > 0 else StackState.RAMPDOWN
+                StackState.STEADY
+                if self.pr_reference > 0
+                else StackState.RAMPDOWN
             )
             return
 
         self.pr = self._relax(self.pr, self.pr_reference, self.rampup_inertia)
         self.temperature = self._relax(
-            self.temperature, self.temperature_max, self.temperature_rise_inertia
+            self.temperature,
+            self.temperature_max,
+            self.temperature_rise_inertia,
         )
 
         remaining = abs(self.pr_reference - self.pr) / max(
@@ -138,16 +141,22 @@ class Electrolyser(Component):
         inertia = self.steady_inertia * (2 if diff < 0 else 4)
         self.pr = self._relax(self.pr, self.pr_reference, inertia)
         self.temperature = self._relax(
-            self.temperature, self.temperature_max, self.temperature_rise_inertia
+            self.temperature,
+            self.temperature_max,
+            self.temperature_rise_inertia,
         )
 
         if self.pr_reference == 0:
             self.stack_state = StackState.RAMPDOWN
 
     def rampdown_dynamics(self):
-        self.pr = self._relax(self.pr, self.pr_reference, self.rampdown_inertia)
+        self.pr = self._relax(
+            self.pr, self.pr_reference, self.rampdown_inertia
+        )
         self.temperature = self._relax(
-            self.temperature, self.temperature_ambient, self.temperature_down_inertia
+            self.temperature,
+            self.temperature_ambient,
+            self.temperature_down_inertia,
         )
 
         if abs(self.pr) < self.eps:
