@@ -1,11 +1,17 @@
 from typing import Tuple, Dict, Any
 from dataclasses import dataclass
 import pandas as pd
+
 try:
     from tqdm import tqdm
-except ModuleNotFoundError:  # pragma: no cover - exercised only in minimal envs
+except (
+    ModuleNotFoundError
+):  # pragma: no cover - exercised only in minimal envs
+
     def tqdm(iterable, disable=False):
         return iterable
+
+
 from .time import Time
 from .components import Component
 from .microgrid import Microgrid
@@ -48,8 +54,8 @@ class Simulation:
     def run(self, use_bar) -> pd.DataFrame:
         trajectory = []
         for _ in tqdm(range(self.steps), disable=not use_bar):
-            (mcg_state, action) = self.step()
-            trajectory.append(mcg_state)
+            mcg_state, action = self.step()
+            trajectory.append(mcg_state)  # NOTE also can add action
         trajectory = pd.DataFrame(trajectory)
 
         trajectory = trajectory.rename(
@@ -60,7 +66,11 @@ class Simulation:
         return trajectory
 
     def calculate_metrics(self, trajectory: pd.DataFrame) -> pd.DataFrame:
+        # TODO implement KPIs
         metrics = (
-            trajectory[["solar_power", "load_power"]].resample("D").mean().round(3)
+            trajectory[["solar_power", "load_power"]]
+            .resample("D")
+            .mean()
+            .round(3)
         )
         return metrics
