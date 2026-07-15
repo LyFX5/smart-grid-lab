@@ -1,0 +1,18 @@
+- time variables set up
+- prepared data pulling
+- components construction
+- devices
+- microgid
+- forecasters
+    - need to ingest implementations
+    - openstef
+    - lstm
+    - sarimax
+- controler
+    - need to ingest implementations
+- closed system simulation run
+- metrics calculator and builder
+- report:
+    - plot
+    - table
+    - abstract text report

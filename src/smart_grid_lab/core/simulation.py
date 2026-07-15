@@ -22,7 +22,6 @@ from .controllers import Strategy
 class SetUp:
     time: Time
     components: Dict[str, Component]
-    # TODO control
 
 
 @dataclass
@@ -64,13 +63,3 @@ class Simulation:
         trajectory = trajectory.set_index("timestamp")
 
         return trajectory
-
-    def calculate_metrics(self, trajectory: pd.DataFrame) -> pd.DataFrame:
-        # TODO implement KPIs
-        metrics = (
-            trajectory[["solar_power", "load_power"]]
-            .resample("D")
-            .mean()
-            .round(3)
-        )
-        return metrics

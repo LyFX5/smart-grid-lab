@@ -8,7 +8,6 @@ Created on Wed Apr 15 20:09:05 2026
 
 from typing import Dict, Any
 import pandas as pd
-import numpy as np
 from enum import Enum
 
 from .component import Component
@@ -41,7 +40,7 @@ class Electrolyser(Component):
         self.time = pd.Timestamp(0)
 
         # dynamical parameters
-        # TODO
+        # TODO identify on some real device data
         self.rampup_inertia = 0.1
         self.steady_inertia = 0.2
         self.rampdown_inertia = 0.3
@@ -64,6 +63,14 @@ class Electrolyser(Component):
     def power(self):
         # W
         return self.current() * self.voltage()
+
+    def max_power_kW(self):
+        pr_saved = self.pr
+        self.pr = 1.0
+        try:
+            return self.power() / 1000.0
+        finally:
+            self.pr = pr_saved
 
     def production_efficiency(self):
         # Wh per kg
