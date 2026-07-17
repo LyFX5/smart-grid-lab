@@ -1,10 +1,5 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Jul 14 12:14:20 2026
 
-@author: eduard
-"""
+
 
 the architecture of logic realm of data management (ask agent to implement)
 
@@ -28,3 +23,11 @@ in future this layer will interact with infrastructure layer (db)
 
 ...
 
+17-07-2026
+implement (with assistance of agent) generalized data ingestion into db and usage of it from the db (currently we experiment only on one dataset. + the experiment implies taking prepared time series)
+
+pipeline:
+laod -> parser -> prepare -> db_manager
+validate -> features -> db_manager
+provide in application_simulation_run
+provide in ui

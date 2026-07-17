@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 project/
 │
-├── core/                      # your existing simulation engine
+├── core/                      # existing simulation engine
 │   ├── microgrid.py
 │   ├── components/
 │   ├── controllers/

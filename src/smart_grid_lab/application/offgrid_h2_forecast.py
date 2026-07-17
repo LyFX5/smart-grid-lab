@@ -23,7 +23,7 @@ from smart_grid_lab.core import (
 
 from smart_grid_lab.core.controllers import Strategy
 
-from smart_grid_lab.application.use_cases.demo_simulation import (
+from smart_grid_lab.application.demo_simulation import (
     BatteryConfig,
     battery_config_from_inputs,
     _build_battery,
@@ -41,30 +41,33 @@ def _default_time() -> Time:
     )
 
 
-def _default_solar_kW(time: Time) -> pd.Series:
-    periods = (time.end - time.start) // time.step
-
-    time_index = pd.date_range(time.start, periods=periods, freq=time.step)
-
+def _synthetic_solar_kW(time: Time) -> pd.Series:
+    time_index = time.index_range
     hour = time_index.hour
     # day_of_year = time_index.dayofyear # may be usefull
     ghi = np.maximum(0, 800 * np.sin(np.pi * (hour - 6) / 12))
     ghi += np.random.normal(0, 50, len(ghi))
     ghi /= 1000
-
     return pd.Series(data=ghi, index=time_index)
 
 
-def _default_load_kW(time: Time) -> pd.Series:
-    periods = (time.end - time.start) // time.step
-
-    time_index = pd.date_range(time.start, periods=periods, freq=time.step)
-
+def _synthetic_load_kW(time: Time) -> pd.Series:
+    periods = time.periods
+    time_index = time.index_range
     np.random.seed(42)
     base_load = 20 + 10 * np.sin(2 * np.pi * np.arange(periods) / 24)
     load = np.maximum(5, base_load + np.random.normal(0, 3, periods))
-
     return pd.Series(data=load, index=time_index)
+
+
+def sample_solar_kW(time: Time) -> pd.Series:
+    # TODO pull from prepared
+    ...
+
+
+def sample_load_kW(time: Time) -> pd.Series:
+    # TODO pull from prepared
+    ...
 
 
 @dataclass
@@ -99,6 +102,7 @@ def run_simulation(
     battery: Battery | None = None,
     h2_config: H2Config | None = None,
     strategy: Strategy | None = None,
+    use_bar=False,
 ) -> Results:
     """
     Run the core simulation engine with hydrogen components and a forecast-based strategy.
@@ -111,10 +115,10 @@ def run_simulation(
     time = time if time is not None else _default_time()
     index = time.index_range
 
-    solar_kw = solar_kw if solar_kw is not None else _default_solar_kW(time)
+    solar_kw = solar_kw if solar_kw is not None else _synthetic_solar_kW(time)
     solar_kw = solar_kw.reindex(index).astype(float)
 
-    load_kw = load_kw if load_kw is not None else _default_load_kW(time)
+    load_kw = load_kw if load_kw is not None else _synthetic_load_kW(time)
     load_kw = load_kw.reindex(index).astype(float)
 
     # net_kw = solar_kw - load_kw # TODO need by forecaster needed by strateegy
@@ -145,7 +149,7 @@ def run_simulation(
 
     sim = Simulation(setup, strategy=strategy)
 
-    trajectory = sim.run(use_bar=False)
+    trajectory = sim.run(use_bar=use_bar)
     metrics = calculate_metrics(trajectory, time.step)
 
     return Results(trajectory=trajectory, metrics=metrics)
