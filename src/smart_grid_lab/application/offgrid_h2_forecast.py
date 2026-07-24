@@ -35,9 +35,9 @@ _PV_PLANT_AREA_M2 = 100.0
 
 def _default_time() -> Time:
     return Time(
-        start=pd.Timestamp(year=2026, month=3, day=15, hour=12),
-        end=pd.Timestamp(year=2026, month=3, day=20, hour=12),
-        step=pd.Timedelta(10, "min"),
+        start=pd.Timestamp(year=2016, month=3, day=15, hour=12, tz="utc"),
+        end=pd.Timestamp(year=2016, month=3, day=20, hour=12, tz="utc"),
+        step=pd.Timedelta(15, "min"),
     )
 
 
@@ -61,13 +61,17 @@ def _synthetic_load_kW(time: Time) -> pd.Series:
 
 
 def sample_solar_kW(time: Time) -> pd.Series:
-    # TODO pull from prepared
-    ...
+    pv_df = pd.read_csv("data/pv_kW.csv")
+    pv_df.index = pd.to_datetime(pv_df.utc_timestamp, utc=True)
+    pv_df = pv_df.drop("utc_timestamp", axis="columns")
+    return pv_df[time.start : time.end][["pv"]]
 
 
 def sample_load_kW(time: Time) -> pd.Series:
-    # TODO pull from prepared
-    ...
+    load_df = pd.read_csv("data/load_kW.csv")
+    load_df.index = pd.to_datetime(load_df.utc_timestamp, utc=True)
+    load_df = load_df.drop("utc_timestamp", axis="columns")
+    return load_df[time.start : time.end][["load"]]
 
 
 @dataclass

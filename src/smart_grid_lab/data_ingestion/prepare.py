@@ -98,12 +98,14 @@ def compact_table(raw_data):
     return power_df
 
 
-def load_power(power_df):
-    load_power_df = power_df[["load"]]
-    load_power_df.index = pd.to_datetime(load_power_df.index, utc=True)
-    load_power_df = load_power_df.sort_index()
-    load_power_df = load_power_df.asfreq("15min")
-    return load_power_df
+"""
+def column(power_df, name):
+    column_df = power_df[[name]]
+    column_df.index = pd.to_datetime(column_df.index, utc=True)
+    column_df = column_df.sort_index()
+    column_df = column_df.asfreq("15min")
+    return column_df
+"""
 
 
 def append_time_features(df: pd.DataFrame, target: str):
@@ -144,8 +146,9 @@ def append_time_features(df: pd.DataFrame, target: str):
     return df
 
 
+"""
 def save_prepared():
-    # TODO save by separate series
+    # save by separate series
     # and tables (like features table)
     # probably training / test tables
     # and stef-ready table will be prepared in infra
@@ -155,3 +158,4 @@ def save_prepared():
 
 if __name__ == "__main__":
     save_prepared()
+"""
