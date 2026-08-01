@@ -4,7 +4,6 @@ preparing data
 for experiment "offgrid h2 forecast-based control"
 """
 
-import numpy as np
 import pandas as pd
 
 
@@ -96,66 +95,3 @@ def compact_table(raw_data):
     power_df[["load", "pv"]] = power_df[["load", "pv"]].clip(lower=0)
 
     return power_df
-
-
-"""
-def column(power_df, name):
-    column_df = power_df[[name]]
-    column_df.index = pd.to_datetime(column_df.index, utc=True)
-    column_df = column_df.sort_index()
-    column_df = column_df.asfreq("15min")
-    return column_df
-"""
-
-
-def append_time_features(df: pd.DataFrame, target: str):
-    df = df.copy()
-
-    df["hour"] = df.index.hour
-    df["dayofweek"] = df.index.dayofweek
-    df["month"] = df.index.month
-    df["dayofyear"] = df.index.dayofyear
-    df["weekofyear"] = df.index.isocalendar().week.astype(int)
-
-    df["is_weekend"] = (df["dayofweek"] >= 5).astype(int)
-
-    df["hour_sin"] = np.sin(2 * np.pi * df["hour"] / 24)
-
-    df["hour_cos"] = np.cos(2 * np.pi * df["hour"] / 24)
-
-    df["dow_sin"] = np.sin(2 * np.pi * df["dayofweek"] / 7)
-
-    df["dow_cos"] = np.cos(2 * np.pi * df["dayofweek"] / 7)
-
-    df["load_lag_1h"] = df[target].shift(4)
-
-    df["load_lag_6h"] = df[target].shift(24)
-
-    df["load_lag_24h"] = df[target].shift(96)
-
-    df["load_lag_48h"] = df[target].shift(192)
-
-    df["load_lag_7d"] = df[target].shift(96 * 7)
-
-    df["load_roll_mean_24h"] = df[target].shift(1).rolling(96).mean()
-
-    df["load_roll_std_24h"] = df[target].shift(1).rolling(96).std()
-
-    df = df.dropna()
-
-    return df
-
-
-"""
-def save_prepared():
-    # save by separate series
-    # and tables (like features table)
-    # probably training / test tables
-    # and stef-ready table will be prepared in infra
-    # in data folder
-    ...
-
-
-if __name__ == "__main__":
-    save_prepared()
-"""
