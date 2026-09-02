@@ -22,7 +22,9 @@ class StackState(Enum):
 
 class Electrolyser(Component):
 
-    def __init__(self, current_max, temperature_ambient):
+    def __init__(self, _id, current_max, temperature_ambient):
+
+        self._id = _id
 
         # constants
         self.current_max = current_max

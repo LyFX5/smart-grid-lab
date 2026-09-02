@@ -1,7 +1,9 @@
 from typing import Dict
 
+from .controller import Controller
 
-class Strategy:
+
+class Reactive(Controller):
 
     def action(self) -> Dict[str, float]:
         return {"battery": self.battery_power}

@@ -50,7 +50,9 @@ class Microgrid:
             elif name == "electrolyser":
                 c.step(float(action.get("electrolyser", 0.0)), dt)
 
-        if "hydrogen_tank" in components and "electrolyser" in components:
+        if (
+            "hydrogen_tank" in components and "electrolyser" in components
+        ):  # TODO electrolyser_ ...
             ely = components["electrolyser"]
             tank = components["hydrogen_tank"]
             dt_h = dt.total_seconds() / 3600.0

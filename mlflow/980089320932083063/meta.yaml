@@ -1,0 +1,9 @@
+artifact_location: file:///home/eduard/Desktop/projects/smart-grid-lab/mlflow/980089320932083063
+creation_time: 1788003367901
+effective_trace_archival_retention: null
+experiment_id: '980089320932083063'
+last_update_time: 1788003367901
+lifecycle_stage: active
+name: pv_gblinear_ghi
+trace_location: null
+workspace: default

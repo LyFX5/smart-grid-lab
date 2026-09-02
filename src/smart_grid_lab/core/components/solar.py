@@ -5,10 +5,12 @@ from .component import Component
 
 class Solar(Component):
 
+    _PV_PLANT_AREA_M2 = 100.0  # TODO configure not hardcode
+
     def __init__(self, irradiance_profile: pd.Series):
         self.profile = irradiance_profile
         self.timestamp = self.profile.index[0]
-        self.pv_plant_area = 100  # TODO configure not hardcode
+        self.pv_plant_area = Solar._PV_PLANT_AREA_M2
 
     def irradiance(self) -> float:
         return self.profile[self.timestamp]

@@ -26,9 +26,10 @@ from openstef_core.datasets import TimeSeriesDataset
 from openstef_core.datasets.validated_datasets import ForecastDataset
 
 from smart_grid_lab.infrastructure.forecasting.pv_physics import PVSystemConfig
+from smart_grid_lab.core.forecasting import PVForecastModel
 
 
-class OpenSTEFGBLinearPVForecastAdapter:
+class OpenSTEFGBLinearPVForecastAdapter(PVForecastModel):
     """Adapter for PV forecasting with MLFlow persistence.
 
     Wraps a ForecastingWorkflowConfig + MLFlowStorage to provide
@@ -61,16 +62,26 @@ class OpenSTEFGBLinearPVForecastAdapter:
         """Recreate workflow with same model_id + storage (triggers MLFlowStorageCallback load on predict)."""
         if self._workflow is not None:
             return self._workflow
-        from pydantic_extra_types.coordinate import Coordinate, Latitude, Longitude
+        from pydantic_extra_types.coordinate import (
+            Coordinate,
+            Latitude,
+            Longitude,
+        )
         from decimal import Decimal
         from openstef_core.types import LeadTime, Q
-        from openstef_models.presets import ForecastingWorkflowConfig, create_forecasting_workflow
-        from openstef_models.presets.forecasting_workflow import GBLinearForecaster, LocationConfig
+        from openstef_models.presets import (
+            ForecastingWorkflowConfig,
+            create_forecasting_workflow,
+        )
+        from openstef_models.presets.forecasting_workflow import (
+            GBLinearForecaster,
+            LocationConfig,
+        )
 
         # For two-stage, target is radiation, else pv
         target = self.radiation_column if self.two_stage else "pv"
         config = ForecastingWorkflowConfig(
-            model_id=self.model_id if not self.two_stage else f"{self.model_id}_ghi",
+            model_id=self.model_id,  # if not self.two_stage else f"{self.model_id}_ghi",
             model="gblinear",
             horizons=[LeadTime.from_string("PT36H")],
             quantiles=[Q(0.1), Q(0.5), Q(0.9)],
@@ -81,7 +92,10 @@ class OpenSTEFGBLinearPVForecastAdapter:
             wind_speed_column="wind_speed_10m",
             pressure_column="surface_pressure",
             location=LocationConfig(
-                coordinate=Coordinate(latitude=Latitude(Decimal("52.132633")), longitude=Longitude(Decimal("5.291266")))
+                coordinate=Coordinate(
+                    latitude=Latitude(Decimal("52.132633")),
+                    longitude=Longitude(Decimal("5.291266")),
+                )
             ),
             verbosity=0,
             mlflow_storage=self.storage,
@@ -97,20 +111,33 @@ class OpenSTEFGBLinearPVForecastAdapter:
     ) -> ForecastDataset:
         """Return probabilistic forecast (quantiles) for PV or GHI."""
         wf = self._get_workflow()
-        forecast: ForecastDataset = wf.predict(dataset, forecast_start=forecast_start)
+        forecast: ForecastDataset = wf.predict(
+            dataset, forecast_start=forecast_start
+        )
         if self.two_stage:
             # forecast is GHI quantiles -> convert to PV via physics
-            from smart_grid_lab.infrastructure.forecasting.pv_physics import apply_pv_physics_to_forecast
+            from smart_grid_lab.infrastructure.forecasting.pv_physics import (
+                apply_pv_physics_to_forecast,
+            )
 
             df = forecast.data
             # try to get temperature from dataset for temp derating
             # forecast.data may not contain temperature; use dataset last temp if needed (approx)
-            converted = apply_pv_physics_to_forecast(df, self.pv_config, ghi_column=self.radiation_column, temperature_column=None)
+            converted = apply_pv_physics_to_forecast(
+                df,
+                self.pv_config,
+                ghi_column=self.radiation_column,
+                temperature_column=self.temperature_column,
+            )
             # wrap back as ForecastDataset (reuse index/sample_interval)
-            return ForecastDataset(converted, sample_interval=forecast.sample_interval)
+            return ForecastDataset(
+                converted, sample_interval=forecast.sample_interval
+            )
         return forecast
 
-    def forecast_pv_kw(self, dataset: TimeSeriesDataset, at: pd.Timestamp, q: float = 0.5) -> float:
+    def forecast_pv_kW(
+        self, dataset: TimeSeriesDataset, at: pd.Timestamp, q: float = 0.5
+    ) -> float:
         """Point forecast for controller (P50). Requires dataset to contain history up to `at`."""
         # Use at as forecast_start
         fc = self.predict_quantiles(dataset, forecast_start=at.to_pydatetime())
@@ -130,12 +157,12 @@ class OpenSTEFGBLinearPVForecastAdapter:
 
     def load_latest_model_direct(self):
         """Direct storage load without workflow (for debugging)."""
-        runs = self.storage.search_latest_runs(self.model_id if not self.two_stage else f"{self.model_id}_ghi")
+        runs = self.storage.search_latest_runs(
+            self.model_id
+        )  # if not self.two_stage else f"{self.model_id}_ghi")
         if not runs:
             raise FileNotFoundError(f"No MLflow run for {self.model_id}")
         run_id = runs[0].info.run_id
-        return self.storage.load_run_model(run_id=run_id, model_id=self.model_id)
-
-
-# Backwards compat alias for old import
-OpenSTEFGBLinearLoadForecastAdapterPV = OpenSTEFGBLinearPVForecastAdapter
+        return self.storage.load_run_model(
+            run_id=run_id, model_id=self.model_id
+        )

@@ -15,7 +15,7 @@ except (
 from .time import Time
 from .components import Component
 from .microgrid import Microgrid
-from .controllers import Strategy
+from .controllers import Controller
 
 
 @dataclass
@@ -32,7 +32,7 @@ class Results:
 
 class Simulation:
 
-    def __init__(self, setup: SetUp, strategy=None):
+    def __init__(self, setup: SetUp, controller=None):
 
         self.setup = setup
 
@@ -41,7 +41,9 @@ class Simulation:
         ) // self.setup.time.step
 
         self.microgrid = Microgrid(self.setup.time, self.setup.components)
-        self.strategy = strategy if strategy is not None else Strategy()
+        self.controller = (
+            controller if controller is not None else Controller()
+        )
 
     def step(self) -> Tuple[Dict[str, Any], Dict[str, float]]:
         mcg_state = self.microgrid.state()

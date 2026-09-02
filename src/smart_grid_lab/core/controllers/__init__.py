@@ -1,9 +1,11 @@
-from .strategy import Strategy
-from .forecast_h2_battery_strategy import ForecastElectrolyserBatteryStrategy
-from .h2_surplus_policy import electrolyser_pr_from_surplus_forecast
+from .controller import Controller
+from .reactive import Reactive
+from .forecasts_informed_rules import ForecastsInformedRulesBased
+from .forecasts_informed_dnn import ForecastsInformedDNNBased
 
 __all__ = [
-    "Strategy",
-    "ForecastElectrolyserBatteryStrategy",
-    "electrolyser_pr_from_surplus_forecast",
+    "Controller",
+    "Reactive",
+    "ForecastsInformedRulesBased",
+    "ForecastsInformedDNNBased",
 ]

@@ -3,10 +3,10 @@ from .components import (
     Battery,
     Component,
     Electrolyser,
-    FuelCell,
     HydrogenTank,
     Load,
     Solar,
+    Grid,
 )
 from .simulation import Results, SetUp, Simulation
 
@@ -15,10 +15,10 @@ __all__ = [
     "Battery",
     "Component",
     "Electrolyser",
-    "FuelCell",
     "HydrogenTank",
     "Load",
     "Solar",
+    "Grid",
     "Results",
     "SetUp",
     "Simulation",

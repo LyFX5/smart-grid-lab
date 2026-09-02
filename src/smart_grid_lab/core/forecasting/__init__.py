@@ -4,10 +4,12 @@ from .heuristic_surplus import (
     RollingMeanBackwardSurplusForecast,
 )
 from .load import LoadForecastModel
+from .pv import PVForecastModel
 
 __all__ = [
     "SurplusForecastModel",
     "OracleMeanSurplusForecast",
     "RollingMeanBackwardSurplusForecast",
     "LoadForecastModel",
+    "PVForecastModel",
 ]

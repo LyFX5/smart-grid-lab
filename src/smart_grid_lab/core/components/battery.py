@@ -1,8 +1,7 @@
 from typing import Dict
-import pandas as pd
+from pandas import Timedelta
 import numpy as np
 from .component import Component
-
 
 """
 Если вы проигнорируете эту нелинейность, ваша стратегия управления решит, 
@@ -58,10 +57,16 @@ class Battery(Component):
         if is_charging:
             alpha = 0.1
             betha = 10
-            return self.max_charge_efficiency * (1 - alpha * np.exp(betha * (soc - 1)))
-        alpha = 0.1  # TODO in constructor (might be different in advanced models)
+            return self.max_charge_efficiency * (
+                1 - alpha * np.exp(betha * (soc - 1))
+            )
+        alpha = (
+            0.1  # TODO in constructor (might be different in advanced models)
+        )
         betha = 10
-        return self.max_discharge_efficiency * (1 - alpha * np.exp(betha * (soc - 1)))
+        return self.max_discharge_efficiency * (
+            1 - alpha * np.exp(betha * (soc - 1))
+        )
 
     def power_limit(self, soc: float, is_charging: bool):
 
@@ -83,7 +88,7 @@ class Battery(Component):
         arg = (self.soc_min - soc) / gamma
         return self.max_discharge_kw * (1 - np.exp(arg))
 
-    def step(self, power: float, step_timedelta: pd.Timedelta):
+    def step(self, power: float, step_timedelta: Timedelta):
 
         self.available_power = power
         step_hours = step_timedelta.total_seconds() / 3600

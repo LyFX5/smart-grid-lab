@@ -1,7 +1,7 @@
 
 25-08-2026
 
-maintatin peak-shaving experiment
+Planned Steps
 1. ingest peak-shaving data
 2. design peak-shaving metrics
 3. retrain models on peak-shaving data
