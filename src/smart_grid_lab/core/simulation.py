@@ -47,8 +47,8 @@ class Simulation:
 
     def step(self) -> Tuple[Dict[str, Any], Dict[str, float]]:
         mcg_state = self.microgrid.state()
-        self.strategy.step(mcg_state)
-        action = self.strategy.action()
+        self.controller.step(mcg_state)
+        action = self.controller.action()
         self.microgrid.step(action)
         return (mcg_state, action)
 
@@ -57,11 +57,8 @@ class Simulation:
         for _ in tqdm(range(self.steps), disable=not use_bar):
             mcg_state, action = self.step()
             trajectory.append(mcg_state)  # NOTE also can add action
-        trajectory = pd.DataFrame(trajectory)
 
-        trajectory = trajectory.rename(
-            columns={"solar_timestamp": "timestamp"}
-        )  # TODO not here
+        trajectory = pd.DataFrame(trajectory)
         trajectory = trajectory.set_index("timestamp")
 
         return trajectory

@@ -1,19 +1,8 @@
-from typing import Dict
-import pandas as pd
-from .component import Component
+from pandas import Series
+from .power_profile import PowerProfile
 
 
-class Load(Component):
+class Load(PowerProfile):
 
-    def __init__(self, power_profile: pd.Series):
-        self.profile = power_profile
-        self.timestamp = self.profile.index[0]
-
-    def power(self) -> float:
-        return self.profile[self.timestamp]
-
-    def state(self) -> Dict[str, float]:
-        return {"power": self.power()}
-
-    def step(self, step_timedelta: pd.Timedelta):
-        self.timestamp += step_timedelta
+    def __init__(self, power_profile: Series):
+        super().__init__(power_profile)

@@ -1,24 +1,16 @@
 from .time import Time
 from .components import (
     Battery,
-    Component,
-    Electrolyser,
-    HydrogenTank,
     Load,
-    Solar,
-    Grid,
+    PV,
 )
 from .simulation import Results, SetUp, Simulation
 
 __all__ = [
     "Time",
     "Battery",
-    "Component",
-    "Electrolyser",
-    "HydrogenTank",
     "Load",
-    "Solar",
-    "Grid",
+    "PV",
     "Results",
     "SetUp",
     "Simulation",

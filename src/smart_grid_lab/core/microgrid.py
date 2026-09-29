@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-import pandas as pd
-
 from .components import Component
 
 
@@ -16,7 +14,7 @@ class Microgrid:
     ``electrolyser`` production over the step (not via the action dict).
     """
 
-    _ORDER_FIRST = ("solar", "load", "battery", "electrolyser")
+    _ORDER_FIRST = ("pv", "load", "battery", "electrolyser")
 
     def __init__(self, time, components: Dict[str, Component]):
         self.timestamp = time.start
@@ -24,15 +22,17 @@ class Microgrid:
         self.components = components
 
     def state(self) -> Dict[str, Any]:
-        state: Dict[str, Any] = {}
+        state: Dict[str, Any] = {"timestamp": self.timestamp}
         for name, component in self.components.items():
             comp_state = component.state()
             for param_name, param in comp_state.items():
                 key = f"{name}_{param_name}"
-                if isinstance(param, pd.Timestamp):
-                    state[key] = param
-                else:
-                    state[key] = float(param)
+                """
+                if not isinstance(param, float):
+                    print(param)
+                    raise TypeError("point type must be float")
+                """
+                state[key] = float(param)
         return state
 
     def step(self, action: Dict[str, float]) -> None:
@@ -43,7 +43,7 @@ class Microgrid:
             if name not in components:
                 continue
             c = components[name]
-            if name in ("solar", "load"):
+            if name in ("pv", "load"):
                 c.step(dt)
             elif name == "battery":
                 c.step(float(action.get("battery", 0.0)), dt)
@@ -52,7 +52,7 @@ class Microgrid:
 
         if (
             "hydrogen_tank" in components and "electrolyser" in components
-        ):  # TODO electrolyser_ ...
+        ):  # TODO maintaine multi electrolysers (electrolyser_ ...)
             ely = components["electrolyser"]
             tank = components["hydrogen_tank"]
             dt_h = dt.total_seconds() / 3600.0
@@ -69,3 +69,5 @@ class Microgrid:
                 component.step(action[name], dt)
             else:
                 component.step(dt)
+
+        self.timestamp += dt

@@ -114,6 +114,32 @@ def empty_figure():
 
 
 """
+import plotly.express as px
+import plotly.io as pio
+
+pio.renderers.default = "browser"
+
+fig = px.line(
+    train_dataset.data,
+    x=train_dataset.data.index,
+    y="pv",
+    title="Training interval — pv",
+    labels={
+        "x": "Time",
+        "pv": "PV (MW)",
+    },
+)
+
+fig = fig.update_layout(
+    yaxis_title="PV (MW)",
+    xaxis_title="Time",
+)
+
+fig.show()
+"""
+
+
+"""
 df = sample_df.melt(
     id_vars="utc_timestamp",
     value_vars=["load", "pv", "grid", "battery"],

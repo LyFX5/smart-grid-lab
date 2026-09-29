@@ -9,9 +9,5 @@ class LoadForecastModel(ABC):
 
     @abstractmethod
     def forecast_load_kW(
-        self,
-        history: pd.Series,
-        at: pd.Timestamp,
-    ) -> float:
-        """Return scalar forecast of load (kW) at decision time `at`."""
-        # TODO or a Serias on horizon?
+        self, history: pd.Series, at: pd.Timestamp, horizon: pd.Timedelta
+    ) -> pd.Series: ...

@@ -35,6 +35,6 @@ def append_time_features(df: pd.DataFrame, target: str):
 
     df["load_roll_std_24h"] = df[target].shift(1).rolling(96).std()
 
-    df = df.dropna()
+    # df = df.dropna()
 
     return df

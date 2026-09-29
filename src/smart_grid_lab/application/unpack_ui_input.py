@@ -6,7 +6,7 @@ Created on Wed Apr  1 11:21:23 2026
 @author: eduard
 """
 
-from smart_grid_lab.domain.builders import (
+from smart_grid_lab.domain.microgrid_configuration import (
     TimeConfig,
     BatteryConfig,
 )
