@@ -1,0 +1,12 @@
+- time and location set up
+- prepared data pulling
+- components configuration
+- forecasters
+    - openstef
+    - lstm
+    - sarimax
+- controler
+- microgid control system construction
+- run simulation loop
+- plot power trajectories
+- display metrics tables
