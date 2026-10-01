@@ -55,3 +55,8 @@ def pv_constraint(df, pv_peak_kW, interpolate=False):
         df["pv"] = df["pv"].interpolate(method="time", limit=4)
 
     return df
+
+
+def load_constraint(df):
+    # TODO
+    ...

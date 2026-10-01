@@ -19,6 +19,15 @@ from datetime import datetime
 from openstef_core.datasets import TimeSeriesDataset
 from openstef_core.datasets.validated_datasets import ForecastDataset
 
+from openstef_models.integrations.mlflow import MLFlowStorage
+
+from openstef_core.types import LeadTime, Q
+
+from openstef_models.presets.forecasting_workflow import (
+    GBLinearForecaster,
+    LocationConfig,
+)
+
 from openstef_models.presets import (
     ForecastingWorkflowConfig,
 )
@@ -33,29 +42,73 @@ from smart_grid_lab.infrastructure.weather.openmeteo_adapter import (
 )
 
 
+import os
+
+os.environ["MLFLOW_ALLOW_FILE_STORE"] = "true"
+
+from pathlib import Path
+
+my_mlflow_storage = MLFlowStorage(
+    tracking_uri="./mlflow",  # -> file:///abs/path/mlflow via normalize_tracking_uri
+    local_artifacts_path=Path("./mlflow_artifacts_local"),
+    # For production DB backend use:
+    # tracking_uri="sqlite:///mlflow.db",
+    # artifact_location="file:///tmp/mlflow_artifacts",
+)
+
+
 class OpenSTEFAdapter:
+    """Adapter for time-series forecasting.
+
+    Wraps a ForecastingWorkflowConfig + MLFlowStorage to provide
+    reusable inference without re-training.
+    """
 
     def __init__(
         self,
-        config: ForecastingWorkflowConfig,
+        model_id: str,
         target_column_name: str,
         sample_interval: Timedelta,
-        index_name: str,
-        index_type: DatetimeIndex,
+        mlflow_storage: MLFlowStorage = my_mlflow_storage,
+        # MLFlowStorage instance (same tracking_uri as training)
     ) -> None:
 
-        self.config = config
+        self.model_id = model_id
         self.target_column_name = target_column_name
         self.sample_interval = sample_interval
-        self.index_name = index_name
-        self.index_type = index_type
+        self.index_name = "datetime"
+        self.index_type = DatetimeIndex
+        self.storage = mlflow_storage
         self._workflow = None
+
+    def _get_default_config(self):
+
+        return ForecastingWorkflowConfig(
+            model_id=self.model_id,
+            model="gblinear",
+            horizons=[LeadTime.from_string("PT36H")],
+            quantiles=[Q(0.1), Q(0.5), Q(0.9)],
+            target_column=self.target_column_name,
+            radiation_column="shortwave_radiation",
+            temperature_column="temperature_2m",
+            relative_humidity_column="relative_humidity_2m",
+            wind_speed_column="wind_speed_10m",
+            pressure_column="surface_pressure",
+            location=LocationConfig(coordinate=MICROGRID_LOCATION),
+            verbosity=0,
+            mlflow_storage=self.storage,
+            gblinear_hyperparams=GBLinearForecaster.HyperParams(n_steps=50),
+        )
 
     def _get_workflow(self):
         """Recreate workflow with same model_id + storage (triggers MLFlowStorageCallback load on predict)."""
+
         if self._workflow is not None:
             return self._workflow
-        self._workflow = create_forecasting_workflow(self.config)
+
+        config = self._get_default_config()
+        self._workflow = create_forecasting_workflow(config)
+
         return self._workflow
 
     def predict_quantiles(
