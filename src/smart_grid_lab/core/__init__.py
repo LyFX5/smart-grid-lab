@@ -4,6 +4,7 @@ from .components import (
     Battery,
     Load,
     PV,
+    Grid,
 )
 from .simulation import Results, SetUp, Simulation
 
@@ -13,6 +14,7 @@ __all__ = [
     "Battery",
     "Load",
     "PV",
+    "Grid",
     "Results",
     "SetUp",
     "Simulation",

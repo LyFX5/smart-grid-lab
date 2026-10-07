@@ -65,7 +65,7 @@ class Microgrid:
 
         if "grid" in components:
             grid = self.components["grid"]
-            grid.step(self.remaining_power, dt)
+            grid.step(self.remaining_power)
 
         if (
             "hydrogen_tank" in components and "electrolyser" in components

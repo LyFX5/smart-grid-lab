@@ -11,6 +11,7 @@ from smart_grid_lab.core import (
     PV,
     Load,
     Battery,
+    Grid,
     SetUp,
     Simulation,
     Results,
@@ -52,10 +53,13 @@ def run_simulation(
 
     battery = battery if battery is not None else default_battery()
 
+    grid = Grid()
+
     components = {
         "pv": PV(pv_kw),
         "load": Load(load_kw),
         "battery": battery,
+        "grid": grid,
     }
 
     setup = SetUp(time=time, components=components)

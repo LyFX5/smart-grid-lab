@@ -53,11 +53,6 @@ class Battery(Component):
             "soc": self.soc,
         }
 
-    def power(self) -> float:
-        if self.discharge_power > 0:
-            return -self.discharge_power
-        return self.charge_power
-
     def efficiency(self, soc: float, is_charging: bool):
         if is_charging:
             alpha = 0.1
