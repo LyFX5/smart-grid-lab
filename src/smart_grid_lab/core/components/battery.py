@@ -53,6 +53,11 @@ class Battery(Component):
             "soc": self.soc,
         }
 
+    def power(self) -> float:
+        if self.discharge_power > 0:
+            return -self.discharge_power
+        return self.charge_power
+
     def efficiency(self, soc: float, is_charging: bool):
         if is_charging:
             alpha = 0.1
@@ -60,9 +65,7 @@ class Battery(Component):
             return self.max_charge_efficiency * (
                 1 - alpha * np.exp(betha * (soc - 1))
             )
-        alpha = (
-            0.1  # TODO in constructor (might be different in advanced models)
-        )
+        alpha = 0.1  # TODO configure in constructor (might be different in advanced models)
         betha = 10
         return self.max_discharge_efficiency * (
             1 - alpha * np.exp(betha * (soc - 1))
@@ -88,21 +91,21 @@ class Battery(Component):
         arg = (self.soc_min - soc) / gamma
         return self.max_discharge_kw * (1 - np.exp(arg))
 
-    def step(self, power: float, step_timedelta: Timedelta):
+    def step(self, charge_power: float, step_timedelta: Timedelta):
 
-        self.available_power = power
+        self.available_power = charge_power
         step_hours = step_timedelta.total_seconds() / 3600
-        is_charging = power > 0
+        is_charging = charge_power >= 0
         efficiency = self.efficiency(self.soc, is_charging)
         power_limit = self.power_limit(self.soc, is_charging)
 
         if is_charging:
-            self.charge_power = min(power_limit, power)
+            self.charge_power = min(power_limit, charge_power)
             self.discharge_power = 0
             energy_delta = self.charge_power * step_hours * efficiency
         else:
             self.charge_power = 0
-            self.discharge_power = min(power_limit, -power)
+            self.discharge_power = min(power_limit, -charge_power)
             energy_delta = -self.discharge_power * step_hours * efficiency
 
         self.soc += energy_delta / self.capacity_kwh

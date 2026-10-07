@@ -20,6 +20,7 @@ class Microgrid:
         self.timestamp = time.start
         self.step_timedelta = time.step
         self.components = components
+        self.remaining_power = 0
 
     def state(self) -> Dict[str, Any]:
         state: Dict[str, Any] = {"timestamp": self.timestamp}
@@ -33,7 +34,17 @@ class Microgrid:
                     raise TypeError("point type must be float")
                 """
                 state[key] = float(param)
+        state["remaining_power"] = self.remaining_power
         return state
+
+    def _power_balance(self):
+        p_pv = self.components["pv"].state()["power"]
+        p_load = self.components["load"].state()["power"]
+        p_battery = (
+            self.components["battery"].state()["discharge_power"]
+            - self.components["battery"].state()["charge_power"]
+        )
+        return p_pv + p_battery - p_load
 
     def step(self, action: Dict[str, float]) -> None:
         dt = self.step_timedelta
@@ -50,6 +61,12 @@ class Microgrid:
             elif name == "electrolyser":
                 c.step(float(action.get("electrolyser", 0.0)), dt)
 
+        self.remaining_power = self._power_balance()
+
+        if "grid" in components:
+            grid = self.components["grid"]
+            grid.step(self.remaining_power, dt)
+
         if (
             "hydrogen_tank" in components and "electrolyser" in components
         ):  # TODO maintaine multi electrolysers (electrolyser_ ...)
@@ -59,6 +76,7 @@ class Microgrid:
             mass_kg = ely.hydrogen_production() * dt_h
             tank.step(mass_kg, dt)
 
+        """
         handled = set(self._ORDER_FIRST) | {"hydrogen_tank"}
         for name, component in components.items():
             if name in handled:
@@ -69,5 +87,6 @@ class Microgrid:
                 component.step(action[name], dt)
             else:
                 component.step(dt)
+        """
 
         self.timestamp += dt
