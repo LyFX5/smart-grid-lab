@@ -86,21 +86,21 @@ class Battery(Component):
         arg = (self.soc_min - soc) / gamma
         return self.max_discharge_kw * (1 - np.exp(arg))
 
-    def step(self, charge_power: float, step_timedelta: Timedelta):
+    def step(self, charge_power_kW: float, step_timedelta: Timedelta):
 
-        self.available_power = charge_power
+        self.available_power = charge_power_kW
         step_hours = step_timedelta.total_seconds() / 3600
-        is_charging = charge_power >= 0
+        is_charging = charge_power_kW >= 0
         efficiency = self.efficiency(self.soc, is_charging)
         power_limit = self.power_limit(self.soc, is_charging)
 
         if is_charging:
-            self.charge_power = min(power_limit, charge_power)
+            self.charge_power = min(power_limit, charge_power_kW)
             self.discharge_power = 0
             energy_delta = self.charge_power * step_hours * efficiency
         else:
             self.charge_power = 0
-            self.discharge_power = min(power_limit, -charge_power)
+            self.discharge_power = min(power_limit, -charge_power_kW)
             energy_delta = -self.discharge_power * step_hours * efficiency
 
         self.soc += energy_delta / self.capacity_kwh

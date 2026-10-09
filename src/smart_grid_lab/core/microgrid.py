@@ -47,8 +47,22 @@ class Microgrid:
         return p_pv + p_battery - p_load
 
     def step(self, action: Dict[str, float]) -> None:
+
         dt = self.step_timedelta
         components = self.components
+
+        self.remaining_power = self._power_balance()
+
+        if "grid" in components:
+            grid = self.components["grid"]
+            grid.step(self.remaining_power)
+
+        p_grid = (
+            self.components["grid"].state()["export_power"]
+            - self.components["grid"].state()["import_power"]
+        )
+
+        self.remaining_power -= p_grid
 
         for name in self._ORDER_FIRST:
             if name not in components:
@@ -60,12 +74,6 @@ class Microgrid:
                 c.step(float(action.get("battery", 0.0)), dt)
             elif name == "electrolyser":
                 c.step(float(action.get("electrolyser", 0.0)), dt)
-
-        self.remaining_power = self._power_balance()
-
-        if "grid" in components:
-            grid = self.components["grid"]
-            grid.step(self.remaining_power)
 
         if (
             "hydrogen_tank" in components and "electrolyser" in components

@@ -59,5 +59,5 @@ def default_time() -> Time:
 
 
 def default_battery() -> Battery:
-    cfg = BatteryConfig(100.0, 30.0, 30.0, 0.95, 0.95, 0.5)
+    cfg = BatteryConfig()
     return build_battery(cfg)

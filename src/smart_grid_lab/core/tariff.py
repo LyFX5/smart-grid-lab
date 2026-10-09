@@ -1,6 +1,6 @@
 import numpy as np
 from pandas import (
-    Series,
+    DataFrame,
     Timestamp,
     Timedelta,
     date_range,
@@ -51,13 +51,10 @@ def get_smooth_dynamic_multiplier(timestamp: Timestamp) -> float:
     return float(np.clip(normalized, 0.0, 1.0))
 
 
-def calculate_realistic_tariff(
+def get_dynamic_import_price(
     timestamp: Timestamp, base_price: float = 40.0
 ) -> float:
-    """
-    Calculates a realistic price in ct/kWh for a given timestamp.
-    Splits the base price into fixed grid/tax costs and dynamic wholesale exposure.
-    """
+
     fixed_component = 15.0  # ct/kWh (grid fees, taxes, baseline procurement)
     dynamic_range = base_price - fixed_component  # e.g., 25.0 ct/kWh
 
@@ -65,26 +62,61 @@ def calculate_realistic_tariff(
     return fixed_component + (dynamic_range * multiplier)
 
 
+def get_dynamic_export_price(
+    timestamp: Timestamp,  # base_export_price: float = 8.5
+) -> float:
+    """
+    Calculates the dynamic export (feed-in) price in ct/kWh.
+    Tracks wholesale market dynamics: low/negative during midday solar peaks,
+    higher during evening demand peaks.
+    """
+    hour_decimal = timestamp.hour + timestamp.minute / 60.0
+
+    # Wholesale base average (simplified)
+    wholesale_base = 6.0
+
+    # Midday solar surplus (drives wholesale price down, can go slightly negative)
+    solar_surplus = -4.0 * np.exp(-((hour_decimal - 13.0) ** 2) / (2 * 3.5**2))
+
+    # Evening demand peak (drives wholesale price up)
+    evening_premium = 3.0 * np.exp(
+        -((hour_decimal - 19.0) ** 2) / (2 * 2.5**2)
+    )
+
+    raw_export_price = wholesale_base + solar_surplus + evening_premium
+
+    # If simulating a fixed EEG feed-in tariff, you would just return `base_feed_in`.
+    # If simulating dynamic market participation, return the calculated wholesale price.
+    # We cap the minimum at 0.0 for simplicity, unless you specifically want to model negative prices.
+    return float(np.clip(raw_export_price, 0.0, 15.0))
+
+
 def generate_smooth_tariff_series(
     start: Timestamp,
     end: Timestamp,
     sample_interval: Timedelta,
-    base_price: float = 40.0,
-) -> Series:
-    """
-    Generates a smooth, realistic price series in ct/kWh for an arbitrary time range,
-    automatically adapting to weekday/weekend patterns.
-    """
+    base_import_price: float = 40.0,
+    base_export_price: float = 8.5,
+) -> DataFrame:
+
     start_ts = to_datetime(start)
     end_ts = to_datetime(end)
     freq = to_timedelta(sample_interval)
 
     idx = date_range(start=start_ts, end=end_ts, freq=freq)
-    prices = [
-        calculate_realistic_tariff(ts, base_price=base_price) for ts in idx
+    import_prices = [
+        get_dynamic_import_price(ts, base_price=base_import_price)
+        for ts in idx
     ]
+    export_prices = [get_dynamic_export_price(ts) for ts in idx]
 
-    return Series(prices, index=idx, name="price_ct_per_kwh")
+    return DataFrame(
+        data={
+            "import_price_ct_per_kwh": import_prices,
+            "export_price_ct_per_kwh": export_prices,
+        },
+        index=idx,
+    )
 
 
 # Example Usage

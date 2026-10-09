@@ -9,8 +9,8 @@ class Grid(Component):
         self.export_power = 0
         self.import_power = 0
 
-        self.export_limit = 100  # kW
-        self.import_limit = 100  # kW
+        self.export_limit = 20  # kW
+        self.import_limit = 25  # kW
 
         self.export_limit_violation = 0
         self.import_limit_violation = 0

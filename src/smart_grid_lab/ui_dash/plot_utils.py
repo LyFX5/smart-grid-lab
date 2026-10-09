@@ -32,7 +32,14 @@ secondary_cols = [
 ]
 
 
-def build_figure(df, primary_cols, secondary_cols):
+def build_figure(
+    df,
+    primary_cols,
+    secondary_cols,
+    title="Microgrid Trajectory",
+    primary_y_title="Power (kW)",
+    secondary_y_title="State of charge / tank level (0–1)",
+):
 
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     df = df.copy()
@@ -61,10 +68,10 @@ def build_figure(df, primary_cols, secondary_cols):
                 secondary_y=True,
             )
 
-    fig.update_yaxes(title_text="Power (kW)", secondary_y=False)
-    fig.update_yaxes(
-        title_text="State of charge / tank level (0–1)", secondary_y=True
-    )
+    fig.update_yaxes(title_text=primary_y_title, secondary_y=False)
+    fig.update_yaxes(title_text=secondary_y_title, secondary_y=True)
+
+    fig = update_layout(fig, title)
 
     return fig
 

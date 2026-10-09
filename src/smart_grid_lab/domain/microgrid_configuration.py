@@ -35,19 +35,21 @@ MICROGRID_LOCATION = Coordinate(
 
 
 PV_AREA_M2: float = 100.0
+PV_PEAK_kW: float = 18.0
+PV_SCALING_FACTOR: float = 3.0
 
 
 @dataclass
 class BatteryConfig:
-    capacity_kwh: float
-    max_charge_kw: float
-    max_discharge_kw: float
-    max_charge_efficiency: float
-    max_discharge_efficiency: float
-    initial_soc: float
+    capacity_kwh: float = 30.0  # kWh
+    max_charge_kw: float = 15.0  # 0.5C rate
+    max_discharge_kw: float = 15.0  # 0.5C rate
+    max_charge_efficiency: float = 0.95
+    max_discharge_efficiency: float = 0.95
+    initial_soc: float = 0.5
 
 
 @dataclass
 class ForecastConfig:
-    history: int = 7*24
+    history: int = 7 * 24
     horizon: int = 24

@@ -17,6 +17,8 @@ from smart_grid_lab.core import (
     Results,
 )
 
+from smart_grid_lab.core.tariff import generate_smooth_tariff_series
+
 from smart_grid_lab.core.controllers import Reactive
 
 from smart_grid_lab.domain.microgrid_configuration import PV_AREA_M2
@@ -34,6 +36,8 @@ def run_simulation(
     pv_kw: pd.Series | None = None,
     load_kw: pd.Series | None = None,
     battery: Battery | None = None,
+    grid: Grid | None = None,
+    tariff: pd.DataFrame | None = None,
     controller: Reactive | None = None,
     use_bar=False,
 ) -> Results:
@@ -53,7 +57,7 @@ def run_simulation(
 
     battery = battery if battery is not None else default_battery()
 
-    grid = Grid()
+    grid = grid if grid is not None else Grid()
 
     components = {
         "pv": PV(pv_kw),
@@ -69,64 +73,142 @@ def run_simulation(
     simulation = Simulation(setup, controller)
 
     trajectory = simulation.run(use_bar=use_bar)
-    metrics = calculate_metrics(trajectory)
+
+    tariff = (
+        tariff
+        if tariff is not None
+        else generate_smooth_tariff_series(
+            start=time.start,
+            end=time.end,
+            sample_interval=time.step,
+        )
+    )
+
+    metrics = format_metrics_table(
+        calculate_metrics(trajectory, tariff, battery.capacity_kwh)
+    )
 
     return Results(trajectory=trajectory, metrics=metrics)
 
 
 def calculate_metrics(
     trajectory: pd.DataFrame,
-) -> pd.DataFrame:
+    tariff: pd.DataFrame,
+    nominal_battery_capacity_kwh: float = None,
+) -> dict:
+    """
+    Calculates comprehensive performance and economic metrics for a microgrid simulation.
 
-    step = trajectory.index[1] - trajectory.index[0]
+    Args:
+        trajectory: Timestamp-indexed DataFrame with power flows (kW) and SOC.
+        tariff: Timestamp-indexed DataFrame with import/export prices (ct/kWh).
+        nominal_battery_capacity_kwh: Optional. Required to calculate battery cycles.
 
-    # TODO re-implement
-    """Summarize use case as UI-ready scalar KPIs."""
-    step_h = step.total_seconds() / 3600.0
+    Returns:
+        dict: A dictionary containing all calculated metrics.
+    """
+    # 1. Ensure indices are aligned and sorted
+    # We use an inner join to ensure we only calculate where we have both power and price data
+    combined = trajectory.join(tariff, how="inner").sort_index()
 
-    def _energy_kwh(column: str, scale: float = 1.0) -> float | None:
-        if column not in trajectory.columns:
-            return None
-        return round(float((trajectory[column] * scale).sum() * step_h), 3)
+    if combined.empty:
+        raise ValueError(
+            "No overlapping timestamps found between trajectory and tariff."
+        )
 
-    final_row = (
-        trajectory.iloc[-1] if not trajectory.empty else pd.Series(dtype=float)
+    # 2. Calculate time step (dt) in hours for energy integration
+    # Using bfill() ensures the first row gets a valid dt (same as the second row)
+    dt_seconds = combined.index.to_series().diff().dt.total_seconds().bfill()
+    dt_hours = dt_seconds / 3600.0
+
+    # 3. Energy Calculations (kWh)
+    grid_import_energy_kwh = (combined["grid_import_power"] * dt_hours).sum()
+    grid_export_energy_kwh = (combined["grid_export_power"] * dt_hours).sum()
+    pv_generated_energy_kwh = (combined["pv_power"] * dt_hours).sum()
+    battery_charge_energy_kwh = (
+        combined["battery_charge_power"] * dt_hours
+    ).sum()
+
+    # 4. Peak Calculations (kW)
+    grid_import_peak_kw = combined["grid_import_power"].max()
+
+    # 5. Economic Calculations (Cost in cents, then converted to EUR)
+    import_cost_ct = (
+        combined["grid_import_power"]
+        * dt_hours
+        * combined["import_price_ct_per_kwh"]
+    ).sum()
+    export_revenue_ct = (
+        combined["grid_export_power"]
+        * dt_hours
+        * combined["export_price_ct_per_kwh"]
+    ).sum()
+    net_cost_ct = import_cost_ct - export_revenue_ct
+
+    # 6. PV Utilization (Self-Consumption Rate %)
+    # Proxy: Total PV generated minus what was exported to the grid
+    pv_self_consumed_kwh = pv_generated_energy_kwh - grid_export_energy_kwh
+    pv_utilization_pct = (
+        (pv_self_consumed_kwh / pv_generated_energy_kwh * 100)
+        if pv_generated_energy_kwh > 0
+        else 0.0
     )
-    metrics = {
-        "pv_energy_kwh": _energy_kwh("pv_power"),
-        "load_energy_kwh": _energy_kwh("load_power"),
-        "electrolyser_energy_kwh": _energy_kwh(
-            "electrolyser_power", scale=1 / 1000.0
-        ),
-        "hydrogen_produced_kg": None,
-        "final_tank_level": None,
-        "final_battery_soc": None,
-        "electrolyser_degradation": None,
-    }
-    if "electrolyser_hydrogen_production" in trajectory.columns:
-        metrics["hydrogen_produced_kg"] = round(
-            float(
-                trajectory["electrolyser_hydrogen_production"].sum() * step_h
-            ),
-            3,
-        )
-    if "hydrogen_tank_level" in trajectory.columns and not trajectory.empty:
-        metrics["final_tank_level"] = round(
-            float(final_row["hydrogen_tank_level"]), 3
-        )
-    if "battery_soc" in trajectory.columns and not trajectory.empty:
-        metrics["final_battery_soc"] = round(
-            float(final_row["battery_soc"]), 3
-        )
-    if (
-        "electrolyser_degradation" in trajectory.columns
-        and not trajectory.empty
-    ):
-        metrics["electrolyser_degradation"] = round(
-            float(final_row["electrolyser_degradation"]), 3
-        )
 
-    return pd.DataFrame([metrics])
+    # 7. Battery Metrics
+    battery_throughput_kwh = battery_charge_energy_kwh
+    battery_cycles = 0.0
+    if nominal_battery_capacity_kwh and nominal_battery_capacity_kwh > 0:
+        battery_cycles = battery_throughput_kwh / nominal_battery_capacity_kwh
+
+    # 8. Violation Metrics
+    # Assuming violation columns are in kW.
+    # Energy = integral of power. Count = number of timestamps where violation > 0.
+    import_violation_energy_kwh = (
+        combined["grid_import_limit_violation"] * dt_hours
+    ).sum()
+    import_violation_count = (
+        combined["grid_import_limit_violation"] > 0.01
+    ).sum()  # >0.01 to avoid float noise
+
+    export_violation_energy_kwh = (
+        combined["grid_export_limit_violation"] * dt_hours
+    ).sum()
+    export_violation_count = (
+        combined["grid_export_limit_violation"] > 0.01
+    ).sum()
+
+    # 9. Compile Results
+    metrics = {
+        "Total Net Cost (EUR)": round(net_cost_ct / 100.0, 2),
+        "Import Cost (EUR)": round(import_cost_ct / 100.0, 2),
+        "Export Revenue (EUR)": round(export_revenue_ct / 100.0, 2),
+        "Grid Import Energy (kWh)": round(grid_import_energy_kwh, 2),
+        "Grid Import Peak (kW)": round(grid_import_peak_kw, 2),
+        "PV Utilization / Self-Consumption (%)": round(pv_utilization_pct, 1),
+        "Battery Throughput (kWh)": round(battery_throughput_kwh, 2),
+        "Battery Equivalent Cycles": round(battery_cycles, 2),
+        "Import Violations (Events)": int(import_violation_count),
+        "Import Violations (Energy kWh)": round(
+            import_violation_energy_kwh, 2
+        ),
+        "Export Violations (Events)": int(export_violation_count),
+        "Export Violations (Energy kWh)": round(
+            export_violation_energy_kwh, 2
+        ),
+        "Total PV Generated (kWh)": round(pv_generated_energy_kwh, 2),
+        "Total Grid Exported (kWh)": round(grid_export_energy_kwh, 2),
+    }
+
+    return metrics
+
+
+def format_metrics_table(metrics_dict: dict) -> pd.DataFrame:
+    """Converts the metrics dictionary into a clean, readable pandas DataFrame."""
+    df = pd.DataFrame.from_dict(
+        metrics_dict, orient="index", columns=["Value"]
+    )
+    df.index.name = "Metric"
+    return df
 
 
 from ..unpack_ui_input import (
