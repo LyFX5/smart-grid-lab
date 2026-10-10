@@ -40,6 +40,7 @@ class Battery(Component):
         self.soc = initial_soc
         self.soc_max = 1
         self.soc_min = 0.05
+        self.soc_computational_error = 0
 
         self.available_power = 0
         self.charge_power = 0
@@ -51,6 +52,7 @@ class Battery(Component):
             "charge_power": self.charge_power,
             "discharge_power": self.discharge_power,
             "soc": self.soc,
+            "soc_computational_error": self.soc_computational_error,
         }
 
     def efficiency(self, soc: float, is_charging: bool):
@@ -94,13 +96,17 @@ class Battery(Component):
         efficiency = self.efficiency(self.soc, is_charging)
         power_limit = self.power_limit(self.soc, is_charging)
 
+        abs_power = abs(charge_power_kW)
+
         if is_charging:
-            self.charge_power = min(power_limit, charge_power_kW)
+            self.charge_power = min(power_limit, abs_power)
             self.discharge_power = 0
             energy_delta = self.charge_power * step_hours * efficiency
         else:
             self.charge_power = 0
-            self.discharge_power = min(power_limit, -charge_power_kW)
+            self.discharge_power = min(power_limit, abs_power)
             energy_delta = -self.discharge_power * step_hours * efficiency
 
-        self.soc += energy_delta / self.capacity_kwh
+        new_soc = self.soc + energy_delta / self.capacity_kwh
+        self.soc = max(self.soc_min, min(self.soc_max, new_soc))
+        self.soc_computational_error = self.soc - new_soc

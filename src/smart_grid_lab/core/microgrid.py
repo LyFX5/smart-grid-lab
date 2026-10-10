@@ -44,6 +44,14 @@ class Microgrid:
             self.components["battery"].state()["discharge_power"]
             - self.components["battery"].state()["charge_power"]
         )
+        """
+        p_pv = self.state()["pv_power"]
+        p_load = self.state()["load_power"]
+        p_battery = (
+            self.state()["battery_discharge_power"]
+            - self.state()["battery_charge_power"]
+        )
+        """
         return p_pv + p_battery - p_load
 
     def step(self, action: Dict[str, float]) -> None:
