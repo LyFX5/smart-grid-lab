@@ -3,7 +3,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 colors = {
-    "solar_power": "#f59e0b",  # amber sun
+    "pv_power": "#f59e0b",  # amber sun
     "load_power": "#60a5fa",  # blue demand
     "battery_available_power": "blue",
     "battery_charge_power": "#34d399",  # green storing
@@ -18,17 +18,21 @@ cell_style = {
 }
 
 primary_cols = [
-    "solar_power",
+    "pv_power",
     "load_power",
     "battery_available_power",
     "battery_charge_power",
     "battery_discharge_power",
-    "electrolyser_power_kw",
+    "grid_export_power",
+    "grid_import_power",
+    "grid_export_limit_violation",
+    "grid_import_limit_violation",
+    "remaining_power",
 ]
 
 secondary_cols = [
     "battery_soc",
-    "hydrogen_tank_level",
+    "battery_soc_computational_error",
 ]
 
 
@@ -71,38 +75,16 @@ def build_figure(
     fig.update_yaxes(title_text=primary_y_title, secondary_y=False)
     fig.update_yaxes(title_text=secondary_y_title, secondary_y=True)
 
-    fig = update_layout(fig, title)
-
-    return fig
-
-
-# template="plotly_dark",
-# paper_bgcolor="#0f172a",  # deep night blue
-# plot_bgcolor="#0f172a",
-# font=dict(color="#e5e7eb"),
-# margin=dict(l=20, r=20, t=40, b=20),
-legend = (
-    dict(
-        bgcolor="rgba(0,0,0,0)",
-        # orientation="h",
-        yanchor="bottom",
-        y=1.02,
-        xanchor="right",
-        x=1,
-    ),
-)
-
-
-def update_layout(fig, title):
     fig.update_layout(
         xaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)"),
         yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)"),
     )
     fig.update_layout(title=title)
+
     return fig
 
 
-def empty_figure():
+def empty_figure(title="Microgrid Trajectory"):
     fig = go.Figure()
     fig.update_layout(
         annotations=[
@@ -117,58 +99,9 @@ def empty_figure():
             )
         ]
     )
+    fig.update_layout(
+        xaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)"),
+        yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)"),
+    )
+    fig.update_layout(title=title)
     return fig
-
-
-"""
-import plotly.express as px
-import plotly.io as pio
-
-pio.renderers.default = "browser"
-
-fig = px.line(
-    train_dataset.data,
-    x=train_dataset.data.index,
-    y="pv",
-    title="Training interval — pv",
-    labels={
-        "x": "Time",
-        "pv": "PV (MW)",
-    },
-)
-
-fig = fig.update_layout(
-    yaxis_title="PV (MW)",
-    xaxis_title="Time",
-)
-
-fig.show()
-"""
-
-
-"""
-df = sample_df.melt(
-    id_vars="utc_timestamp",
-    value_vars=["load", "pv", "grid", "battery"],
-    var_name="category",
-    value_name="power"
-)
-
-
-fig = px.line(
-    df,
-    x="utc_timestamp",
-    y="power",
-    color="category",
-    title="3-Day Microgrid Energy Snapshot"
-)
-
-fig.update_layout(
-    xaxis_title="Time",
-    yaxis_title="Power",
-    template="plotly_white",
-    height=600
-)
-
-fig.show()
-"""

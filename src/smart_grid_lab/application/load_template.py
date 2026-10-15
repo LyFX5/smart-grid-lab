@@ -18,7 +18,7 @@ from smart_grid_lab.domain.builders import (
 )
 
 
-def _synthetic_irradiance(time: Time) -> pd.Series:
+def synthetic_irradiance(time: Time) -> pd.Series:
     time_index = time.index_range
     hour = time_index.hour
     # day_of_year = time_index.dayofyear # may be usefull
@@ -27,7 +27,7 @@ def _synthetic_irradiance(time: Time) -> pd.Series:
     return pd.Series(data=ghi, index=time_index)
 
 
-def _synthetic_load_kW(time: Time) -> pd.Series:
+def synthetic_load_kW(time: Time) -> pd.Series:
     periods = time.periods
     time_index = time.index_range
     np.random.seed(42)
@@ -36,14 +36,14 @@ def _synthetic_load_kW(time: Time) -> pd.Series:
     return pd.Series(data=load, index=time_index)
 
 
-def sample_pv_kW(time: Time) -> pd.Series:
+def load_pv_kW(time: Time) -> pd.Series:
     pv_df = pd.read_csv("data/pv_kW.csv")
     pv_df.index = pd.to_datetime(pv_df.utc_timestamp, utc=True)
     pv_df = pv_df.drop("utc_timestamp", axis="columns")
     return pv_df[time.start : time.end]["pv"]
 
 
-def sample_load_kW(time: Time) -> pd.Series:
+def load_load_kW(time: Time) -> pd.Series:
     load_df = pd.read_csv("data/load_kW.csv")
     load_df.index = pd.to_datetime(load_df.utc_timestamp, utc=True)
     load_df = load_df.drop("utc_timestamp", axis="columns")

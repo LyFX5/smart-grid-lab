@@ -4,7 +4,7 @@ for experiment description see:
     rnd notes and materials/use_cases/PV-LOAD-BATTERY.md
 """
 
-import pandas as pd
+from pandas import Series, DataFrame
 
 from smart_grid_lab.core import (
     Time,
@@ -26,18 +26,18 @@ from smart_grid_lab.domain.microgrid_configuration import PV_AREA_M2
 from ..load_template import (
     default_time,
     default_battery,
-    _synthetic_irradiance,
-    _synthetic_load_kW,
+    synthetic_irradiance,
+    synthetic_load_kW,
 )
 
 
 def run_simulation(
     time: Time | None = None,
-    pv_kw: pd.Series | None = None,
-    load_kw: pd.Series | None = None,
+    pv_kw: Series | None = None,
+    load_kw: Series | None = None,
     battery: Battery | None = None,
     grid: Grid | None = None,
-    tariff: pd.DataFrame | None = None,
+    tariff: DataFrame | None = None,
     controller: Reactive | None = None,
     use_bar=False,
 ) -> Results:
@@ -48,11 +48,11 @@ def run_simulation(
     pv_kw = (
         pv_kw
         if pv_kw is not None
-        else _synthetic_irradiance(time) * PV_AREA_M2 / 1000.0
+        else synthetic_irradiance(time) * PV_AREA_M2 / 1000.0
     )
     pv_kw = pv_kw.reindex(index).astype(float)
 
-    load_kw = load_kw if load_kw is not None else _synthetic_load_kW(time)
+    load_kw = load_kw if load_kw is not None else synthetic_load_kW(time)
     load_kw = load_kw.reindex(index).astype(float)
 
     battery = battery if battery is not None else default_battery()
@@ -84,16 +84,15 @@ def run_simulation(
         )
     )
 
-    metrics = format_metrics_table(
-        calculate_metrics(trajectory, tariff, battery.capacity_kwh)
-    )
+    metrics = calculate_metrics(trajectory, tariff, battery.capacity_kwh)
+    metrics = format_metrics_table(metrics, case_name="Reactive Control")
 
     return Results(trajectory=trajectory, metrics=metrics)
 
 
 def calculate_metrics(
-    trajectory: pd.DataFrame,
-    tariff: pd.DataFrame,
+    trajectory: DataFrame,
+    tariff: DataFrame,
     nominal_battery_capacity_kwh: float = None,
 ) -> dict:
     """
@@ -202,50 +201,8 @@ def calculate_metrics(
     return metrics
 
 
-def format_metrics_table(metrics_dict: dict) -> pd.DataFrame:
+def format_metrics_table(metrics_dict: dict, case_name) -> DataFrame:
     """Converts the metrics dictionary into a clean, readable pandas DataFrame."""
-    df = pd.DataFrame.from_dict(
-        metrics_dict, orient="index", columns=["Value"]
-    )
+    df = DataFrame.from_dict(metrics_dict, orient="index", columns=[case_name])
     df.index.name = "Metric"
     return df
-
-
-from ..unpack_ui_input import (
-    time_config_from_inputs,
-    battery_config_from_inputs,
-)
-from smart_grid_lab.domain.builders import (
-    build_time,
-    build_battery,
-)
-
-
-def run_from_ui(
-    start: str,
-    end: str,
-    step_minutes: int | float | None,
-    pv_kw: pd.Series,
-    load_kw: pd.Series,
-    battery_capacity_kwh: float,
-    battery_max_charge_kw: float,
-    battery_max_discharge_kw: float,
-    battery_charge_eff: float,
-    battery_discharge_eff: float,
-    battery_initial_soc: float,
-) -> Results:
-
-    time_config = time_config_from_inputs(start, end, step_minutes)
-    time = build_time(time_config)
-
-    battery_config = battery_config_from_inputs(
-        battery_capacity_kwh,
-        battery_max_charge_kw,
-        battery_max_discharge_kw,
-        battery_charge_eff,
-        battery_discharge_eff,
-        battery_initial_soc,
-    )
-    battery = build_battery(battery_config)
-
-    return run_simulation(time, pv_kw, load_kw, battery)

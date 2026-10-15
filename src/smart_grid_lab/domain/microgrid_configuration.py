@@ -23,9 +23,9 @@ from pydantic_extra_types.coordinate import (
 class TimeConfig:
     """Configuration of the simulation horizon in wall-clock time."""
 
-    start: str  # ISO-like timestamp string
-    end: str  # ISO-like timestamp string
-    step_minutes: int
+    start: str = "2016-03-15 12:00:00"  # ISO-like timestamp string
+    end: str = "2016-03-30 12:00:00"  # ISO-like timestamp string
+    step_minutes: int = 15
 
 
 MICROGRID_LOCATION = Coordinate(

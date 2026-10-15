@@ -2,7 +2,6 @@ from dash import dcc, html
 from . import setup_elements
 from . import results_elements
 
-
 setup_column = html.Div(
     className="setup-column",
     style={
@@ -18,13 +17,11 @@ setup_column = html.Div(
     children=[
         html.H2("Set Up Microgrid", style={"marginTop": 0}),
         setup_elements.time,
-        setup_elements.control_use_case,
-        setup_elements.solar_irradiance,
+        setup_elements.pv_power,
         setup_elements.load_power,
         setup_elements.battery,
-        setup_elements.forecast_h2,
         setup_elements.run_button,
-        dcc.Store(id="solar-profile-store", data=None),
+        dcc.Store(id="pv-profile-store", data=None),
         dcc.Store(id="load-profile-store", data=None),
     ],
 )
@@ -42,7 +39,10 @@ results_column = html.Div(
         "flexDirection": "column",
         "gap": "1rem",
     },
-    children=[results_elements.telemetry_figure, results_elements.metrics_table],
+    children=[
+        results_elements.trajectory_figure,
+        results_elements.metrics_table,
+    ],
 )
 
 

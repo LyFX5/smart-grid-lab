@@ -1,32 +1,29 @@
 import pandas as pd
-import plotly.graph_objects as go
-from dash import dcc, html
-from plotly.subplots import make_subplots
 
-from ..plot_utils import (
+from dash import dcc, html
+
+from smart_grid_lab.ui_dash.plot_utils import (
     build_figure,
-    update_layout,
     empty_figure,
     primary_cols,
     secondary_cols,
 )
 
 
-def make_telemetry_figure(telemetry_df: pd.DataFrame | None):
-    if telemetry_df is not None:
-        fig = build_figure(telemetry_df, primary_cols, secondary_cols)
+def make_trajectory_figure(trajectory_df: pd.DataFrame | None):
+    if trajectory_df is not None:
+        fig = build_figure(trajectory_df, primary_cols, secondary_cols)
     else:
         fig = empty_figure()
-    fig = update_layout(fig, title="Microgrid Telemetry")
     return fig
 
 
-telemetry_figure = html.Div(
-    className="telemetry-figure",
-    # style={"flex": "1", "minWidth": 0, "padding": "1rem"},
+trajectory_figure = html.Div(
+    className="trajectory-figure",
+    style={"flex": "1", "minWidth": 0, "padding": "1rem"},
     children=dcc.Graph(
-        id="telemetry-figure",
-        figure=make_telemetry_figure(None),
+        id="trajectory-figure",
+        figure=make_trajectory_figure(None),
         config={"displayModeBar": True},
         style={"height": "85vh"},
     ),
@@ -34,52 +31,126 @@ telemetry_figure = html.Div(
 
 
 def make_metrics_table(metrics_table: pd.DataFrame | None):
-    if metrics_table is None:
-        metrics_table = pd.DataFrame()
+    # Handle empty or missing data gracefully
+    if metrics_table is None or metrics_table.empty:
+        return html.Div(
+            "No metrics available.",
+            style={
+                "color": "#94a3b8",
+                "padding": "1rem",
+                "textAlign": "center",
+            },
+        )
+
+    # 1. Reset index so the metric names become a regular column named 'Metric'
+    df = metrics_table.reset_index()
+    if "index" in df.columns:
+        df.rename(columns={"index": "Metric"}, inplace=True)
+
+    columns = df.columns
+
+    # 2. Define Styles (Matching your dark theme screenshot)
+    header_style = {
+        "backgroundColor": "transparent",
+        "color": "#94a3b8",
+        "fontWeight": "600",
+        "padding": "12px 16px",
+        "borderBottom": "1px solid #334155",
+        "textAlign": "left",
+        "fontSize": "12px",
+        "textTransform": "uppercase",
+        "letterSpacing": "0.05em",
+    }
+
+    # Specific style for the "Metric" header to align with the data
+    metric_header_style = {**header_style, "textAlign": "left", "width": "60%"}
+    value_header_style = {**header_style, "textAlign": "right"}
+
+    row_style = {
+        "borderBottom": "1px solid #1e293b",
+    }
+
+    metric_cell_style = {
+        "padding": "12px 16px",
+        "color": "#e2e8f0",
+        "fontWeight": "600",
+        "fontSize": "14px",
+        "textAlign": "left",
+    }
+
+    value_cell_style = {
+        "padding": "12px 16px",
+        "color": "#e2e8f0",
+        "fontFamily": "monospace",
+        "fontSize": "14px",
+        "textAlign": "right",
+    }
+
+    # 3. Build the Table
     table = html.Table(
         children=[
             html.Thead(
-                html.Tr([html.Th(col) for col in metrics_table.columns]),
-                style={
-                    # "backgroundColor": "#1e293b",
-                    "fontWeight": "600",
-                    # "padding": "16px",
-                    "borderBottom": "1px solid #334155",
-                    "textAlign": "left",
-                },
+                html.Tr(
+                    [
+                        html.Th("Metric", style=metric_header_style),
+                        *[
+                            html.Th(col, style=value_header_style)
+                            for col in columns
+                            if col != "Metric"
+                        ],
+                    ]
+                )
             ),
             html.Tbody(
                 [
                     html.Tr(
                         [
-                            html.Td(metrics_table.iloc[i][col])
-                            for col in metrics_table.columns
-                        ]
+                            # First cell: Metric Name
+                            html.Td(row["Metric"], style=metric_cell_style),
+                            # Subsequent cells: Values
+                            *[
+                                html.Td(
+                                    (
+                                        f"{row[col]:,.2f}"
+                                        if isinstance(row[col], float)
+                                        else str(row[col])
+                                    ),
+                                    style=value_cell_style,
+                                )
+                                for col in columns
+                                if col != "Metric"
+                            ],
+                        ],
+                        style=row_style,
                     )
-                    for i in range(len(metrics_table))
-                ],
+                    for _, row in df.iterrows()
+                ]
             ),
         ],
         style={
-            # "width": "100%",
+            "width": "100%",
             "borderCollapse": "collapse",
-            # "backgroundColor": "#0f172a",
-            # "color": "#e5e7eb",
+            "backgroundColor": "#0f172a",  # Dark background from screenshot
+            "color": "#e5e7eb",
             "fontSize": "14px",
-            # "padding": "16px",
-            "borderRadius": "6px",  # 6px ?
-            "boxShadow": "0 10px 30px rgba(0,0,0,0.3)",
+            "borderRadius": "8px",
+            "boxShadow": "0 4px 6px -1px rgba(0, 0, 0, 0.5)",
+            "overflow": "hidden",  # Ensures border-radius clips the corners
         },
     )
+
     return table
 
 
 metrics_table = html.Div(
     id="metrics-table",
     className="metrics-table",
-    # style={"flex": "1", "minWidth": 0, "padding": "1rem"},
+    style={"flex": "1", "minWidth": 0, "padding": "1rem"},
     children=[
-        html.H2("Metrics Table", style={"marginTop": 0, "fontSize": "14px"}),
+        html.H2(
+            "Metrics",
+            style={"marginTop": 0, "fontSize": "16px", "color": "#f8fafc"},
+        ),
         make_metrics_table(None),
     ],
 )

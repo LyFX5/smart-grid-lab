@@ -18,8 +18,8 @@ from .microgrid_configuration import TimeConfig, BatteryConfig
 
 def build_time(cfg: TimeConfig) -> Time:
     return Time(
-        start=pd.Timestamp(cfg.start),
-        end=pd.Timestamp(cfg.end),
+        start=pd.Timestamp(cfg.start, tz="utc"),
+        end=pd.Timestamp(cfg.end, tz="utc"),
         step=pd.Timedelta(cfg.step_minutes, "min"),
     )
 

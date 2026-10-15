@@ -17,17 +17,21 @@ def time_config_from_inputs(
     end: str | None,
     step_minutes: int | float | None,
 ) -> TimeConfig:
-    """
-    Build a TimeConfig object from UI inputs, with safe fallbacks.
-    """
+
+    default_config = TimeConfig()
+
     if not start:
-        start = "2026-03-15 12:00:00"
+        start = default_config.start
     if not end:
-        end = "2026-03-20 12:00:00"
+        end = default_config.end
     try:
-        step_val = int(step_minutes) if step_minutes is not None else 10
+        step_val = (
+            int(step_minutes)
+            if step_minutes is not None
+            else default_config.step_minutes
+        )
     except (TypeError, ValueError):
-        step_val = 10
+        step_val = default_config.step_minutes
 
     return TimeConfig(start, end, step_val)
 
@@ -36,8 +40,8 @@ def battery_config_from_inputs(
     capacity_kwh,
     max_charge_kw,
     max_discharge_kw,
-    charge_eff,
-    discharge_eff,
+    max_charge_efficiency,
+    max_discharge_efficiency,
     initial_soc,
 ) -> BatteryConfig:
     def _num(v, default):
@@ -48,17 +52,41 @@ def battery_config_from_inputs(
         except (TypeError, ValueError):
             return default
 
-    capacity_kwh = _num(capacity_kwh, 100.0)
-    max_charge_kw = _num(max_charge_kw, 30.0)
-    max_discharge_kw = _num(max_discharge_kw, 30.0)
-    charge_eff = _num(charge_eff, 0.95)
-    discharge_eff = _num(discharge_eff, 0.95)
-    initial_soc = _num(initial_soc, 0.5)
+    default_config = BatteryConfig()
+
+    capacity_kwh = _num(capacity_kwh, default_config.capacity_kwh)
+    max_charge_kw = _num(max_charge_kw, default_config.max_charge_kw)
+    max_discharge_kw = _num(max_discharge_kw, default_config.max_discharge_kw)
+    max_charge_efficiency = _num(
+        max_charge_efficiency, default_config.max_charge_efficiency
+    )
+    max_discharge_efficiency = _num(
+        max_discharge_efficiency, default_config.max_discharge_efficiency
+    )
+    initial_soc = _num(initial_soc, default_config.initial_soc)
+
     return BatteryConfig(
         capacity_kwh,
         max_charge_kw,
         max_discharge_kw,
-        charge_eff,
-        discharge_eff,
+        max_charge_efficiency,
+        max_discharge_efficiency,
         initial_soc,
     )
+
+
+"""
+def _positive_int(value, default: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(1, parsed)
+
+
+def _float_or_default(value, default: float) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+"""
