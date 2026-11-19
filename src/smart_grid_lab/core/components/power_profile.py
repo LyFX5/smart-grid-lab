@@ -17,3 +17,15 @@ class PowerProfile(Component):
 
     def step(self, step_timedelta: pd.Timedelta):
         self.timestamp += step_timedelta
+
+    def history(
+        self,
+        period: pd.Timedelta,
+    ):
+        return self.profile[self.timestamp - period : self.timestamp]
+
+    def future(
+        self,
+        period: pd.Timedelta,
+    ):
+        return self.profile[self.timestamp : self.timestamp + period]

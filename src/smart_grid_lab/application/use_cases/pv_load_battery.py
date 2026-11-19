@@ -10,7 +10,6 @@ from smart_grid_lab.core import (
     Time,
     PV,
     Load,
-    Battery,
     Grid,
     SetUp,
     Simulation,
@@ -19,15 +18,20 @@ from smart_grid_lab.core import (
 
 from smart_grid_lab.core.tariff import generate_smooth_tariff_series
 
-from smart_grid_lab.core.controllers import Reactive
+from .forecasting import PVForecastModel, LoadForecastModel
+
+from smart_grid_lab.core.controllers import MPC
 
 from smart_grid_lab.domain.microgrid_configuration import PV_AREA_M2
 
 from ..load_template import (
     default_time,
-    default_battery,
     synthetic_irradiance,
     synthetic_load_kW,
+)
+from smart_grid_lab.domain.microgrid_configuration import BatteryConfig
+from smart_grid_lab.domain.builders import (
+    build_battery,
 )
 
 
@@ -35,10 +39,13 @@ def run_simulation(
     time: Time | None = None,
     pv_kw: Series | None = None,
     load_kw: Series | None = None,
-    battery: Battery | None = None,
+    battery_config: BatteryConfig | None = None,
     grid: Grid | None = None,
     tariff: DataFrame | None = None,
-    controller: Reactive | None = None,
+    perfect_forecasts: bool | None = None,
+    pv_model: PVForecastModel | None = None,
+    load_model: LoadForecastModel | None = None,
+    controller: MPC | None = None,
     use_bar=False,
 ) -> Results:
 
@@ -55,7 +62,10 @@ def run_simulation(
     load_kw = load_kw if load_kw is not None else synthetic_load_kW(time)
     load_kw = load_kw.reindex(index).astype(float)
 
-    battery = battery if battery is not None else default_battery()
+    battery_config = (
+        battery_config if battery_config is not None else BatteryConfig()
+    )
+    battery = build_battery(battery_config)
 
     grid = grid if grid is not None else Grid()
 
@@ -66,14 +76,6 @@ def run_simulation(
         "grid": grid,
     }
 
-    setup = SetUp(time=time, components=components)
-
-    controller = controller if controller is not None else Reactive()
-
-    simulation = Simulation(setup, controller)
-
-    trajectory = simulation.run(use_bar=use_bar)
-
     tariff = (
         tariff
         if tariff is not None
@@ -83,6 +85,21 @@ def run_simulation(
             sample_interval=time.step,
         )
     )
+
+    setup = SetUp(
+        time=time,
+        components=components,
+        perfect_forecasts=perfect_forecasts,
+        pv_model=pv_model,
+        load_model=load_model,
+        tarif_model=tariff,
+    )
+
+    controller = controller if controller is not None else MPC(battery_config)
+
+    simulation = Simulation(setup, controller)
+
+    trajectory = simulation.run(use_bar=use_bar)
 
     metrics = calculate_metrics(trajectory, tariff, battery.capacity_kwh)
     metrics = format_metrics_table(metrics, case_name="Reactive Control")

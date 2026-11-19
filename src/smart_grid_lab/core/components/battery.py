@@ -28,6 +28,8 @@ class Battery(Component):
         max_charge_efficiency,
         max_discharge_efficiency,
         initial_soc,
+        soc_min,
+        soc_max,
     ):
         self.capacity_kwh = capacity_kwh
 
@@ -38,8 +40,8 @@ class Battery(Component):
         self.max_discharge_efficiency = max_discharge_efficiency
 
         self.soc = initial_soc
-        self.soc_max = 1
-        self.soc_min = 0.05
+        self.soc_min = soc_min
+        self.soc_max = soc_max
         self.soc_computational_error = 0
 
         self.available_power = 0

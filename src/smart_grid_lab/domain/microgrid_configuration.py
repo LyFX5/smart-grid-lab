@@ -47,6 +47,8 @@ class BatteryConfig:
     max_charge_efficiency: float = 0.95
     max_discharge_efficiency: float = 0.95
     initial_soc: float = 0.5
+    soc_min: float = 0.5
+    soc_max: float = 1
 
 
 @dataclass

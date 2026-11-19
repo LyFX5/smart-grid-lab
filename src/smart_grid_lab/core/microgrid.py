@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
+from pandas import Series, Timedelta, DataFrame
+
 from .components import Component
+
+from .forecasting import PVForecastModel, LoadForecastModel
 
 
 class Microgrid:
@@ -16,11 +20,29 @@ class Microgrid:
 
     _ORDER_FIRST = ("pv", "load", "battery", "electrolyser")
 
-    def __init__(self, time, components: Dict[str, Component]):
+    def __init__(
+        self,
+        time,
+        components: Dict[str, Component],
+        perfect_forecasts: bool,
+        pv_model: PVForecastModel | None,
+        load_model: LoadForecastModel | None,
+        tarif_model: DataFrame,
+    ):
         self.timestamp = time.start
         self.step_timedelta = time.step
         self.components = components
         self.remaining_power = 0
+
+        self.history_size = Timedelta(7, "D")
+        self.forecast_size = Timedelta(1, "D")
+
+        self.perfect_forecasts = perfect_forecasts
+
+        self.pv_model = pv_model
+        self.load_model = load_model
+
+        self.tarif_model = tarif_model
 
     def state(self) -> Dict[str, Any]:
         state: Dict[str, Any] = {"timestamp": self.timestamp}
@@ -36,6 +58,29 @@ class Microgrid:
                 state[key] = float(param)
         state["remaining_power"] = self.remaining_power
         return state
+
+    def forecasts(self) -> Dict[str, Series]:
+        if self.perfect_forecasts:
+            pv_forecast = self.components["pv"].future(self.forecast_size)
+            load_forecast = self.components["load"].future(self.forecast_size)
+        else:
+            pv_history = self.components["pv"].history(self.history_size)
+            load_history = self.components["load"].history(self.history_size)
+
+            pv_forecast = self.pv_model.forecast_pv_kW(
+                pv_history, self.timestamp, self.forecast_size
+            )
+            load_forecast = self.load_model.forecast_load_kW(
+                load_history, self.timestamp, self.forecast_size
+            )
+        price_forecast = self.tarif_model["import_price_ct_per_kwh"][
+            self.timestamp : self.timestamp + self.forecast_size
+        ]
+        return {
+            "pv_forecast": pv_forecast,
+            "load_forecast": load_forecast,
+            "price_forecast": price_forecast,
+        }
 
     def _power_balance(self):
         p_pv = self.components["pv"].state()["power"]
