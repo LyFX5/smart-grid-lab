@@ -55,3 +55,17 @@ class BatteryConfig:
 class ForecastConfig:
     history: int = 7 * 24
     horizon: int = 24
+
+
+from enum import Enum
+
+
+class ForecastingType(Enum):
+    PERFECT = "perfect"
+    GBL = "GBLinear"
+    PERCISTENT = "percistent"
+
+
+class ControlType(Enum):
+    REACTIVE = "reactive"
+    MPC = "mpc"

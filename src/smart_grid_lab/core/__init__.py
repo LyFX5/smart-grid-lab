@@ -6,7 +6,8 @@ from .components import (
     PV,
     Grid,
 )
-from .simulation import Results, SetUp, Simulation
+from .microgrid import Microgrid
+from .simulation import Results, Simulation
 
 __all__ = [
     "Time",
@@ -15,7 +16,7 @@ __all__ = [
     "Load",
     "PV",
     "Grid",
+    "Microgrid",
     "Results",
-    "SetUp",
     "Simulation",
 ]

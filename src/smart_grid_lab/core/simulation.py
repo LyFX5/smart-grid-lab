@@ -1,7 +1,9 @@
 from typing import Tuple, Dict, Any
 from dataclasses import dataclass
 import pandas as pd
+from tqdm import tqdm
 
+"""
 try:
     from tqdm import tqdm
 except (
@@ -10,23 +12,11 @@ except (
 
     def tqdm(iterable, disable=False):
         return iterable
+"""
 
 
-from .time import Time
-from .components import Component
 from .microgrid import Microgrid
-from .forecasting import PVForecastModel, LoadForecastModel
 from .controllers import Controller, ForecastsInformed
-
-
-@dataclass
-class SetUp:
-    time: Time
-    components: Dict[str, Component]
-    perfect_forecasts: bool
-    pv_model: PVForecastModel
-    load_model: LoadForecastModel
-    tarif_model: pd.DataFrame
 
 
 @dataclass
@@ -37,25 +27,12 @@ class Results:
 
 class Simulation:
 
-    def __init__(self, setup: SetUp, controller=None):
-
-        self.setup = setup
-
+    def __init__(self, microgrid: Microgrid, controller: Controller):
         self.steps = (
-            self.setup.time.end - self.setup.time.start
-        ) // self.setup.time.step
-
-        self.microgrid = Microgrid(
-            self.setup.time,
-            self.setup.components,
-            self.setup.perfect_forecasts,
-            self.setup.pv_model,
-            self.setup.load_model,
-            self.setup.tarif_model,
-        )
-        self.controller = (
-            controller if controller is not None else Controller()
-        )
+            microgrid.time.end - microgrid.time.start
+        ) // microgrid.time.step - 1 * 24 * 4  # TODO do not hardcode
+        self.microgrid = microgrid
+        self.controller = controller
 
     def step(self) -> Tuple[Dict[str, Any], Dict[str, float]]:
         mcg_state = self.microgrid.state()
@@ -72,7 +49,9 @@ class Simulation:
         trajectory = []
         for _ in tqdm(range(self.steps), disable=not use_bar):
             mcg_state, action = self.step()
-            trajectory.append(mcg_state)  # NOTE also can add action
+            trajectory.append(mcg_state)
+            # NOTE also can add action
+            # and also can add forecasts (or forecasts[0])
 
         trajectory = pd.DataFrame(trajectory)
         trajectory = trajectory.set_index("timestamp")

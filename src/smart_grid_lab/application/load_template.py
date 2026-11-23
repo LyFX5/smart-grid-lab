@@ -9,13 +9,7 @@ Created on Wed Apr  1 11:21:44 2026
 import numpy as np
 import pandas as pd
 
-from smart_grid_lab.core import Time, Battery
-
-from smart_grid_lab.domain.microgrid_configuration import BatteryConfig
-
-from smart_grid_lab.domain.builders import (
-    build_battery,
-)
+from smart_grid_lab.core import Time
 
 
 def synthetic_irradiance(time: Time) -> pd.Series:
@@ -48,16 +42,3 @@ def load_load_kW(time: Time) -> pd.Series:
     load_df.index = pd.to_datetime(load_df.utc_timestamp, utc=True)
     load_df = load_df.drop("utc_timestamp", axis="columns")
     return load_df[time.start : time.end]["load"]
-
-
-def default_time() -> Time:
-    return Time(
-        start=pd.Timestamp(year=2016, month=3, day=15, hour=12, tz="utc"),
-        end=pd.Timestamp(year=2016, month=3, day=20, hour=12, tz="utc"),
-        step=pd.Timedelta(15, "min"),
-    )
-
-
-def default_battery() -> Battery:
-    cfg = BatteryConfig()
-    return build_battery(cfg)

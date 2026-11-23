@@ -32,4 +32,6 @@ def build_battery(cfg: BatteryConfig) -> Battery:
         max_charge_efficiency=cfg.max_charge_efficiency,
         max_discharge_efficiency=cfg.max_discharge_efficiency,
         initial_soc=cfg.initial_soc,
+        soc_min=cfg.soc_min,
+        soc_max=cfg.soc_max,
     )

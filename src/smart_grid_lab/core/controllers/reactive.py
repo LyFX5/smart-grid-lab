@@ -13,3 +13,6 @@ class Reactive(Controller):
         load_power = microgrid_state["load_power"]
         remaining_power = solar_power - load_power
         self.battery_power = remaining_power
+
+    def __str__(self):
+        return "Reactive"

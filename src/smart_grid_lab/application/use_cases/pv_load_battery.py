@@ -7,49 +7,53 @@ for experiment description see:
 from pandas import Series, DataFrame
 
 from smart_grid_lab.core import (
-    Time,
     PV,
     Load,
     Grid,
-    SetUp,
+    Microgrid,
     Simulation,
     Results,
 )
 
 from smart_grid_lab.core.tariff import generate_smooth_tariff_series
 
-from .forecasting import PVForecastModel, LoadForecastModel
+from smart_grid_lab.core.forecasting import PVForecastModel, LoadForecastModel
 
-from smart_grid_lab.core.controllers import MPC
+from smart_grid_lab.core.controllers import Controller
 
-from smart_grid_lab.domain.microgrid_configuration import PV_AREA_M2
 
 from ..load_template import (
-    default_time,
     synthetic_irradiance,
     synthetic_load_kW,
 )
-from smart_grid_lab.domain.microgrid_configuration import BatteryConfig
+from smart_grid_lab.domain.microgrid_configuration import (
+    PV_AREA_M2,
+    TimeConfig,
+    BatteryConfig,
+)
 from smart_grid_lab.domain.builders import (
+    build_time,
     build_battery,
 )
 
 
 def run_simulation(
-    time: Time | None = None,
+    time_config: TimeConfig | None = None,
+    battery_config: BatteryConfig | None = None,
     pv_kw: Series | None = None,
     load_kw: Series | None = None,
-    battery_config: BatteryConfig | None = None,
     grid: Grid | None = None,
     tariff: DataFrame | None = None,
+    use_forecasts: bool | None = None,
     perfect_forecasts: bool | None = None,
     pv_model: PVForecastModel | None = None,
     load_model: LoadForecastModel | None = None,
-    controller: MPC | None = None,
+    controller: Controller | None = None,
     use_bar=False,
 ) -> Results:
 
-    time = time if time is not None else default_time()
+    time_config = time_config if time_config is not None else TimeConfig()
+    time = build_time(time_config)
     index = time.index_range
 
     pv_kw = (
@@ -76,6 +80,8 @@ def run_simulation(
         "grid": grid,
     }
 
+    microgrid = Microgrid(time, components)
+
     tariff = (
         tariff
         if tariff is not None
@@ -86,23 +92,30 @@ def run_simulation(
         )
     )
 
-    setup = SetUp(
-        time=time,
-        components=components,
-        perfect_forecasts=perfect_forecasts,
-        pv_model=pv_model,
-        load_model=load_model,
-        tarif_model=tariff,
-    )
+    if use_forecasts:
+        if perfect_forecasts:
+            microgrid.set_forecasting_models(
+                perfect_forecasts=perfect_forecasts,
+                pv_model=None,
+                load_model=None,
+            )
+        else:
+            microgrid.set_forecasting_models(
+                perfect_forecasts=perfect_forecasts,
+                pv_model=pv_model,
+                load_model=load_model,
+            )
 
-    controller = controller if controller is not None else MPC(battery_config)
+        microgrid.set_tarif_model(tariff)
 
-    simulation = Simulation(setup, controller)
+    controller = controller if controller is not None else Controller()
+
+    simulation = Simulation(microgrid, controller)
 
     trajectory = simulation.run(use_bar=use_bar)
 
     metrics = calculate_metrics(trajectory, tariff, battery.capacity_kwh)
-    metrics = format_metrics_table(metrics, case_name="Reactive Control")
+    metrics = format_metrics_table(metrics, control_type=str(controller))
 
     return Results(trajectory=trajectory, metrics=metrics)
 
@@ -218,8 +231,10 @@ def calculate_metrics(
     return metrics
 
 
-def format_metrics_table(metrics_dict: dict, case_name) -> DataFrame:
+def format_metrics_table(metrics_dict: dict, control_type) -> DataFrame:
     """Converts the metrics dictionary into a clean, readable pandas DataFrame."""
-    df = DataFrame.from_dict(metrics_dict, orient="index", columns=[case_name])
+    df = DataFrame.from_dict(
+        metrics_dict, orient="index", columns=[control_type]
+    )
     df.index.name = "Metric"
     return df

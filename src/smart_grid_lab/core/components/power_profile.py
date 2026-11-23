@@ -27,5 +27,8 @@ class PowerProfile(Component):
     def future(
         self,
         period: pd.Timedelta,
+        step_timedelta: pd.Timedelta,
     ):
-        return self.profile[self.timestamp : self.timestamp + period]
+        return self.profile[
+            self.timestamp : self.timestamp + period - step_timedelta
+        ]

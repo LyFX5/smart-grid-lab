@@ -4,6 +4,8 @@ from typing import Any, Dict
 
 from pandas import Series, Timedelta, DataFrame
 
+from .time import Time
+
 from .components import Component
 
 from .forecasting import PVForecastModel, LoadForecastModel
@@ -22,26 +24,34 @@ class Microgrid:
 
     def __init__(
         self,
-        time,
+        time: Time,
         components: Dict[str, Component],
-        perfect_forecasts: bool,
-        pv_model: PVForecastModel | None,
-        load_model: LoadForecastModel | None,
-        tarif_model: DataFrame,
     ):
+        self.time = time
         self.timestamp = time.start
         self.step_timedelta = time.step
         self.components = components
         self.remaining_power = 0
 
-        self.history_size = Timedelta(7, "D")
-        self.forecast_size = Timedelta(1, "D")
-
+    def set_forecasting_models(
+        self,
+        perfect_forecasts: bool | None = None,
+        pv_model: PVForecastModel | None = None,
+        load_model: LoadForecastModel | None = None,
+    ):
+        assert perfect_forecasts or (
+            isinstance(pv_model, PVForecastModel)
+            and isinstance(load_model, LoadForecastModel)
+        ), "Set forecasting models or use perfect forecasts."
         self.perfect_forecasts = perfect_forecasts
 
         self.pv_model = pv_model
         self.load_model = load_model
 
+        self.history_size = Timedelta(7, "D")  # TODO configure not hardcode
+        self.forecast_size = Timedelta(1, "D")
+
+    def set_tarif_model(self, tarif_model: DataFrame):
         self.tarif_model = tarif_model
 
     def state(self) -> Dict[str, Any]:
@@ -61,9 +71,18 @@ class Microgrid:
 
     def forecasts(self) -> Dict[str, Series]:
         if self.perfect_forecasts:
-            pv_forecast = self.components["pv"].future(self.forecast_size)
-            load_forecast = self.components["load"].future(self.forecast_size)
+            pv_forecast = self.components["pv"].future(
+                self.forecast_size, self.step_timedelta
+            )
+            load_forecast = self.components["load"].future(
+                self.forecast_size, self.step_timedelta
+            )
         else:
+            assert (
+                isinstance(self.pv_model, PVForecastModel)
+                and isinstance(self.load_model, LoadForecastModel)
+                and isinstance(self.tarif_model, DataFrame)
+            ), "Some forecasting models or tarif model are not set up in this microgrid."
             pv_history = self.components["pv"].history(self.history_size)
             load_history = self.components["load"].history(self.history_size)
 
@@ -73,13 +92,21 @@ class Microgrid:
             load_forecast = self.load_model.forecast_load_kW(
                 load_history, self.timestamp, self.forecast_size
             )
-        price_forecast = self.tarif_model["import_price_ct_per_kwh"][
-            self.timestamp : self.timestamp + self.forecast_size
+        grid_import_price = self.tarif_model["import_price_ct_per_kwh"][
+            self.timestamp : self.timestamp
+            + self.forecast_size
+            - self.step_timedelta
+        ]
+        grid_export_price = self.tarif_model["export_price_ct_per_kwh"][
+            self.timestamp : self.timestamp
+            + self.forecast_size
+            - self.step_timedelta
         ]
         return {
             "pv_forecast": pv_forecast,
             "load_forecast": load_forecast,
-            "price_forecast": price_forecast,
+            "grid_import_price": grid_import_price,
+            "grid_export_price": grid_export_price,
         }
 
     def _power_balance(self):

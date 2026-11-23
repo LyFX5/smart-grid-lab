@@ -8,6 +8,8 @@ Created on Mon Nov  9 12:35:09 2026
 
 from typing import Dict
 
+from numpy import ndarray
+
 from pandas import Series, Timedelta
 
 import cvxpy as cp
@@ -38,10 +40,13 @@ class MPC(ForecastsInformed):
 
         pv_forecast = forecasts["pv_forecast"]
         load_forecast = forecasts["load_forecast"]
-        price_forecast = forecasts["price_forecast"]
+        grid_import_price = forecasts["grid_import_price"]
+        grid_export_price = forecasts["grid_export_price"]
 
         H = int(self.horizon / self.period)
         dt = self.period.total_seconds() / 3600
+
+        # TODO for first value in forecasts use actual current value
 
         self.battery_power = self.optimize(
             H,
@@ -54,32 +59,35 @@ class MPC(ForecastsInformed):
             self.battery_config.soc_max,
             self.battery_config.max_charge_kw,
             self.battery_config.max_discharge_kw,
-            pv_forecast,
-            load_forecast,
-            price_forecast,
+            pv_forecast.to_numpy(),
+            load_forecast.to_numpy(),
+            grid_import_price.to_numpy(),
+            grid_export_price.to_numpy(),
         )
 
     def optimize(
         self,
-        H,
-        dt,
-        soc_current,
-        eta_ch,
-        eta_dis,
-        E_bat,
-        soc_min,
-        soc_max,
-        p_ch_max,
-        p_dis_max,
-        pv_forecast,
-        load_forecast,
-        price_forecast,
+        H: int,
+        dt: float,
+        soc_current: float,
+        eta_ch: float,
+        eta_dis: float,
+        E_bat: float,
+        soc_min: float,
+        soc_max: float,
+        p_ch_max: float,
+        p_dis_max: float,
+        pv_forecast: ndarray,
+        load_forecast: ndarray,
+        grid_import_price: ndarray,
+        grid_export_price: ndarray,
     ):
 
         p_ch = cp.Variable(H, nonneg=True)
         p_dis = cp.Variable(H, nonneg=True)
         soc = cp.Variable(H + 1)
-        p_grid = cp.Variable(H, nonneg=True)
+        p_grid_import = cp.Variable(H, nonneg=True)
+        p_grid_export = cp.Variable(H, nonneg=True)
 
         constraints = [
             soc[0] == soc_current,
@@ -91,15 +99,28 @@ class MPC(ForecastsInformed):
             ),
             soc >= soc_min,
             soc <= soc_max,
+            p_ch >= 0,
             p_ch <= p_ch_max,
+            p_dis >= 0,
             p_dis <= p_dis_max,
-            p_grid + pv_forecast + p_dis - p_ch == load_forecast,
+            p_grid_import - p_grid_export + pv_forecast + p_dis - p_ch
+            == load_forecast,
         ]
 
-        cost = cp.sum(price_forecast * p_grid * dt)
+        import_cost = cp.sum(
+            cp.multiply(grid_import_price, p_grid_import * dt)
+        )
+        export_cost = cp.sum(
+            cp.multiply(grid_export_price, p_grid_export * dt)
+        )
+        cost = import_cost - export_cost
+        # TODO add battery power frequency cost
 
         problem = cp.Problem(cp.Minimize(cost), constraints)
 
         problem.solve(solver=cp.OSQP)
 
-        return p_dis.value[0] - p_ch.value[0]
+        return p_ch.value[0] - p_dis.value[0]
+
+    def __str__(self):
+        return "MPC"
