@@ -42,7 +42,7 @@ def run_simulation(
     battery_config: BatteryConfig | None = None,
     pv_kw: Series | None = None,
     load_kw: Series | None = None,
-    grid: Grid | None = None,
+    on_grid: bool | None = None,
     tariff: DataFrame | None = None,
     use_forecasts: bool | None = None,
     perfect_forecasts: bool | None = None,
@@ -71,14 +71,14 @@ def run_simulation(
     )
     battery = build_battery(battery_config)
 
-    grid = grid if grid is not None else Grid()
-
     components = {
         "pv": PV(pv_kw),
         "load": Load(load_kw),
         "battery": battery,
-        "grid": grid,
     }
+
+    if on_grid:
+        components.update({"grid": Grid()})
 
     microgrid = Microgrid(time, components)
 

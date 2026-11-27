@@ -27,4 +27,6 @@ class OpenSTEFGBLinearPVForecastAdapter(PVForecastModel):
         at: Timestamp,
         horizon: Timedelta,
     ) -> Series:
-        return self.openstef_adapter.forecast(history, at, horizon, q=0.5)
+        f_pv = self.openstef_adapter.forecast(history, at, horizon, q=0.5)
+        print(f"{len(f_pv)=}")
+        return f_pv

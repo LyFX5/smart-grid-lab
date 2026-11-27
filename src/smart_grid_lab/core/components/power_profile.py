@@ -22,13 +22,18 @@ class PowerProfile(Component):
         self,
         period: pd.Timedelta,
     ):
-        return self.profile[self.timestamp - period : self.timestamp]
+        # return self.profile[self.timestamp - period : self.timestamp]
+        return self.profile[
+            (self.profile.index > self.timestamp - period)
+            & (self.profile.index <= self.timestamp)
+        ]
 
     def future(
         self,
         period: pd.Timedelta,
-        step_timedelta: pd.Timedelta,
     ):
+        # return self.profile[self.timestamp : self.timestamp + period]
         return self.profile[
-            self.timestamp : self.timestamp + period - step_timedelta
+            (self.profile.index > self.timestamp)
+            & (self.profile.index < self.timestamp + period)
         ]

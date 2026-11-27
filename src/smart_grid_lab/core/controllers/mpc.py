@@ -10,7 +10,7 @@ from typing import Dict
 
 from numpy import ndarray
 
-from pandas import Series, Timedelta
+import pandas as pd
 
 import cvxpy as cp
 
@@ -20,8 +20,8 @@ from .forecasts_informed import ForecastsInformed
 class MPC(ForecastsInformed):
 
     def __init__(self, battery_config):
-        self.horizon = Timedelta(1, "D")
-        self.period = Timedelta(15, "min")
+        self.horizon = pd.Timedelta(1, "D")
+        self.period = pd.Timedelta(15, "min")
         self.battery_power = 0
         self.battery_config = battery_config
 
@@ -33,20 +33,29 @@ class MPC(ForecastsInformed):
     def step(
         self,
         microgrid_state: Dict[str, float],
-        forecasts: Dict[str, Series],
+        forecasts: Dict[str, pd.Series],
     ):
-
+        timestamp = microgrid_state["timestamp"]
+        pv_power = microgrid_state["pv_power"]
+        load_power = microgrid_state["load_power"]
         soc_current = microgrid_state["battery_soc"]
 
         pv_forecast = forecasts["pv_forecast"]
         load_forecast = forecasts["load_forecast"]
+
+        pv_forecast = pd.concat(
+            [pd.Series([pv_power], index=[timestamp]), pv_forecast]
+        ).sort_index()
+
+        load_forecast = pd.concat(
+            [pd.Series([load_power], index=[timestamp]), load_forecast]
+        ).sort_index()
+
         grid_import_price = forecasts["grid_import_price"]
         grid_export_price = forecasts["grid_export_price"]
 
         H = int(self.horizon / self.period)
         dt = self.period.total_seconds() / 3600
-
-        # TODO for first value in forecasts use actual current value
 
         self.battery_power = self.optimize(
             H,
@@ -114,7 +123,12 @@ class MPC(ForecastsInformed):
             cp.multiply(grid_export_price, p_grid_export * dt)
         )
         cost = import_cost - export_cost
-        # TODO add battery power frequency cost
+        # TODO add battery power frequency cost (p_dis squared).
+        # but it is necessary to know normalizing constant,
+        # e.g. cost of battery degradation
+        # TODO assess peak cost. to address peak-shaving reliability
+        # TODO constrain battery final SOC ? to address battery autonomy
+        # how to address the amount of battery reserve required?
 
         problem = cp.Problem(cp.Minimize(cost), constraints)
 

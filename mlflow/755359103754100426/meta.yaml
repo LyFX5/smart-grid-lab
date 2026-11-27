@@ -1,0 +1,9 @@
+artifact_location: file:///home/eduard/Desktop/projects/smart-grid-lab/mlflow/755359103754100426
+creation_time: 1795774713602
+effective_trace_archival_retention: null
+experiment_id: '755359103754100426'
+last_update_time: 1795774713602
+lifecycle_stage: active
+name: load_gblinear
+trace_location: null
+workspace: default

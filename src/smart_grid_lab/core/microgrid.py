@@ -71,12 +71,8 @@ class Microgrid:
 
     def forecasts(self) -> Dict[str, Series]:
         if self.perfect_forecasts:
-            pv_forecast = self.components["pv"].future(
-                self.forecast_size, self.step_timedelta
-            )
-            load_forecast = self.components["load"].future(
-                self.forecast_size, self.step_timedelta
-            )
+            pv_forecast = self.components["pv"].future(self.forecast_size)
+            load_forecast = self.components["load"].future(self.forecast_size)
         else:
             assert (
                 isinstance(self.pv_model, PVForecastModel)
@@ -87,10 +83,14 @@ class Microgrid:
             load_history = self.components["load"].history(self.history_size)
 
             pv_forecast = self.pv_model.forecast_pv_kW(
-                pv_history, self.timestamp, self.forecast_size
+                pv_history,
+                self.timestamp + self.step_timedelta,
+                self.forecast_size,
             )
             load_forecast = self.load_model.forecast_load_kW(
-                load_history, self.timestamp, self.forecast_size
+                load_history,
+                self.timestamp + self.step_timedelta,
+                self.forecast_size,
             )
         grid_import_price = self.tarif_model["import_price_ct_per_kwh"][
             self.timestamp : self.timestamp
